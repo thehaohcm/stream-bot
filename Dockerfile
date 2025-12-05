@@ -25,7 +25,7 @@ WORKDIR /app
 # 4. Cài đặt thư viện Python
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-
+RUN apt-get update && apt-get install -y wget ping
 RUN wget -O font.ttf https://github.com/google/fonts/raw/main/apache/roboto/Roboto-Bold.ttf
 
 # 5. Copy source code
