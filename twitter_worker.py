@@ -1,104 +1,60 @@
+# twitter_worker.py
 import feedparser
 from deep_translator import GoogleTranslator
-import time
-import os
 import asyncio
-from tts_worker import text_to_speech_smart
+import tts_worker  # Import file tts_worker.py ở trên
 
-# Cấu hình đa nguồn
-FEEDS = [
-    # 1. Nguồn tin tổng hợp (Ổn định nhất - Ưu tiên)
-    {
-        "name": "Tin Nhanh Crypto", 
-        "url": "https://cryptopanic.com/news/rss/",
-        "type": "general"
-    }
-]
+# --- CẤU HÌNH ---
+RSS_URL = "https://cryptopanic.com/news/rss/"
+MAX_NEWS = 5  # Số tin muốn đọc
 
-LAST_SEEN_LINKS = []
-NEWS_FILE = "news.txt"
+def get_crypto_news():
+    print(f"[RSS] Đang tải tin từ CryptoPanic...")
+    try:
+        feed = feedparser.parse(RSS_URL)
+        if not feed.entries:
+            print("[RSS] Không có tin nào.")
+            return None
 
-def get_latest_news():
-    print("[News] Dang quet tin moi...")
-    latest_news = []
-    
-    for feed in FEEDS:
-        try:
-            # Setup request header để tránh bị chặn (quan trọng với Nitter)
-            d = feedparser.parse(feed["url"])
+        # Chuẩn bị nội dung
+        full_content = "Chào bạn, đây là điểm tin nhanh thị trường Crypto. "
+        translator = GoogleTranslator(source='auto', target='vi')
+
+        count = 0
+        for entry in feed.entries:
+            if count >= MAX_NEWS: break
             
-            if len(d.entries) > 0:
-                # Lấy 2 tin mới nhất từ mỗi nguồn
-                for i in range(min(2, len(d.entries))):
-                    entry = d.entries[i]
-                    
-                    # Bỏ qua Retweet hoặc Reply (nếu là nguồn Twitter)
-                    if feed["type"] == "twitter" and entry.title.startswith("R to @"):
-                        continue
-                        
-                    # Nếu tin chưa từng xử lý
-                    if entry.link not in LAST_SEEN_LINKS:
-                        print(f"[NEW] Tin moi tu {feed['name']}")
-                        
-                        # Dịch tiêu đề
-                        try:
-                            translated = GoogleTranslator(source='auto', target='vi').translate(entry.title)
-                        except:
-                            translated = entry.title # Fallback nếu lỗi dịch
-                        
-                        news_item = {
-                            "source": feed["name"],
-                            "translated": translated
-                        }
-                        latest_news.append(news_item)
-                        LAST_SEEN_LINKS.append(entry.link)
-                        
-                        # Cache 50 link
-                        if len(LAST_SEEN_LINKS) > 50:
-                            LAST_SEEN_LINKS.pop(0)
-
-        except Exception as e:
-            print(f"[ERROR] Loi nguon {feed['name']}: {e}")
-
-    return latest_news
-
-async def main_loop():
-    while True:
-        new_items = get_latest_news()
-        
-        if new_items:
-            # Đọc file cũ để nối thêm tin mới (tránh mất tin cũ đang chạy chữ)
-            current_ticker = ""
+            title_en = entry.title
+            print(f"  - (EN): {title_en}")
+            
+            # Dịch sang Tiếng Việt
             try:
-                with open(NEWS_FILE, "r", encoding="utf-8") as f:
-                    current_ticker = f.read()
-            except: pass
+                title_vi = translator.translate(title_en)
+                print(f"    (VI): {title_vi}")
+                full_content += f"Tin thứ {count + 1}. {title_vi}. "
+                count += 1
+            except Exception as e:
+                print(f"    [Lỗi dịch]: {e}")
+                continue
 
-            full_speak_text = ""
-            new_ticker_chunk = ""
-            
-            for item in new_items:
-                # Soạn nội dung đọc
-                full_speak_text += f"Tin mới từ {item['source']}: {item['translated']}. "
-                # Soạn nội dung chạy chữ
-                new_ticker_chunk += f" | [{item['source']}] {item['translated']}"
+        full_content += "Cảm ơn bạn đã lắng nghe."
+        return full_content
 
-            # Giới hạn độ dài chạy chữ (chỉ giữ khoảng 1000 ký tự cuối để không bị nặng)
-            final_ticker = (current_ticker + new_ticker_chunk)[-2000:]
-            
-            # 1. Ghi file chạy chữ
-            with open(NEWS_FILE, "w", encoding="utf-8") as f:
-                f.write(final_ticker)
-            
-            # 2. Đọc tin mới
-            await text_to_speech_smart(full_speak_text)
-            
-        else:
-            print("[News] Khong co tin moi...")
-            
-        # CryptoPanic update khá nhanh, check mỗi 3 phút
-        await asyncio.sleep(180)
+    except Exception as e:
+        print(f"[RSS-Error] Lỗi lấy tin: {e}")
+        return None
+
+async def main():
+    # Bước 1: Lấy nội dung text từ RSS
+    news_text = get_crypto_news()
+
+    if news_text:
+        # Bước 2: Gọi tts_worker để đọc nội dung đó
+        print(f"\n[System] Bắt đầu chuyển văn bản sang giọng nói...")
+        await tts_worker.text_to_speech_smart(news_text)
+    else:
+        print("[System] Không có nội dung để đọc.")
 
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop_policy().get_event_loop()
-    loop.run_until_complete(main_loop())
+    # Chạy quy trình
+    asyncio.run(main())
