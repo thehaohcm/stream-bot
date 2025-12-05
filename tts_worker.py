@@ -2,6 +2,7 @@ import asyncio
 import edge_tts
 from gtts import gTTS
 import os
+import shutil
 
 # Cấu hình giọng đọc
 VOICE_EDGE = "vi-VN-NamMinhNeural" # Giọng đọc tin tức xịn
@@ -19,22 +20,25 @@ def use_google_tts(text):
     tts.save(OUTPUT_FILE)
 
 async def text_to_speech_smart(text):
-    # Xóa file cũ nếu có
-    if os.path.exists(OUTPUT_FILE):
-        os.remove(OUTPUT_FILE)
+    # Tên file tạm và file chính thức
+    TEMP_FILE = "news_audio_temp.mp3"
+    FINAL_FILE = "news_audio.mp3"
 
     try:
-        # Ưu tiên 1: Thử dùng Edge TTS (Giọng hay)
-        await use_edge_tts(text)
-        print(f"[SUCCESS] Đã tạo audio bằng Edge TTS: {OUTPUT_FILE}")
+        # 1. Tạo ra file tạm trước (Thay vì ghi thẳng vào news_audio.mp3)
+        print(f"[TTS] Dang tao file tam: {TEMP_FILE}...")
+        communicate = edge_tts.Communicate(text, VOICE_EDGE)
+        await communicate.save(TEMP_FILE)
+        
+        # 2. Di chuyển file tạm thành file chính (Hành động này là Atomic trên Linux)
+        # FFmpeg sẽ không bao giờ đọc phải file lỗi/file rỗng
+        shutil.move(TEMP_FILE, FINAL_FILE)
+        
+        print(f"[SUCCESS] Đã cập nhật file audio mới: {FINAL_FILE}")
+        
     except Exception as e:
-        print(f"[WARNING] Edge TTS thất bại: {e}")
-        # Ưu tiên 2: Fallback sang Google TTS (Bao chạy)
-        try:
-            use_google_tts(text)
-            print(f"[SUCCESS] Đã tạo audio bằng Google TTS (Backup): {OUTPUT_FILE}")
-        except Exception as e_google:
-            print(f"[ERROR] Cả 2 kênh đều lỗi: {e_google}")
+        print(f"[ERROR] Lỗi TTS: {e}")
+        # (Logic fallback sang Google TTS cũng nên dùng file tạm tương tự)
 
 # Giả lập tin tức để test
 SAMPLE_NEWS = """

@@ -23,9 +23,10 @@ echo "Bat dau Livestream len Youtube..."
 # -f flv : Định dạng stream RTMP
 
 ffmpeg -y \
-    -f x11grab -draw_mouse 0 -video_size 1280x720 -framerate 30 -i :99 \
-    -stream_loop -1 -re -i "$AUDIO_INPUT" \
-    -c:v libx264 -preset veryfast -maxrate 3000k -bufsize 6000k -pix_fmt yuv420p -g 60 \
+    -thread_queue_size 4096 -f x11grab -draw_mouse 0 -video_size 1280x720 -framerate 30 -i :99 \
+    -thread_queue_size 4096 -f concat -safe 0 -stream_loop -1 -i playlist.txt \
+    -c:v libx264 -preset veryfast -tune zerolatency -maxrate 2500k -bufsize 5000k -pix_fmt yuv420p -g 60 \
     -c:a aac -b:a 128k -ar 44100 \
-    -vf "drawtext=fontfile=$FONT_PATH:textfile=news.txt:y=h-line_h-10:x=w-(t*100):fontcolor=white:fontsize=24:box=1:boxcolor=black@0.5:boxborderw=5" \
+    -vf "drawtext=fontfile=$FONT_PATH:textfile=news.txt:reload=1:y=h-line_h-10:x=w-(t*100):fontcolor=white:fontsize=24:box=1:boxcolor=black@0.5:boxborderw=5" \
+    -map 0:v -map 1:a \
     -f flv "$YT_URL/$YT_KEY"
