@@ -3,6 +3,7 @@ import feedparser
 from deep_translator import GoogleTranslator
 import asyncio
 import tts_worker  # Import file tts_worker.py ở trên
+import time
 
 # --- CẤU HÌNH ---
 RSS_URL = "https://cryptopanic.com/news/rss/"
@@ -56,5 +57,16 @@ async def main():
         print("[System] Không có nội dung để đọc.")
 
 if __name__ == "__main__":
-    # Chạy quy trình
-    asyncio.run(main())
+    while True:
+        try:
+            print("\n--- BẮT ĐẦU CHU KỲ CẬP NHẬT TIN TỨC ---")
+            asyncio.run(main()) # Chạy lấy tin và tạo audio
+            
+            print("Đang chờ 15 phút để cập nhật tin tiếp theo...")
+            time.sleep(900) # Ngủ 900 giây (15 phút)
+            
+        except KeyboardInterrupt:
+            break
+        except Exception as e:
+            print(f"Lỗi vòng lặp chính: {e}")
+            time.sleep(60) # Lỗi thì chờ 1 phút thử lại

@@ -1,1 +1,3 @@
+ffconcat version 1.0
+file 'news_audio.mp3'
 file 'news_audio.mp3'
