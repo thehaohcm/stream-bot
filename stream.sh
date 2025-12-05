@@ -4,7 +4,7 @@
 # Thay bằng RTMP URL và Key của bạn (Lấy từ Youtube Studio > Create > Go Live)
 # URL thường là: rtmp://a.rtmp.youtube.com/live2
 YT_URL="rtmp://a.rtmp.youtube.com/live2"
-YT_KEY="thay-key-cua-ban-vao-day" # <--- QUAN TRỌNG: PASTE KEY CỦA BẠN VÀO ĐÂY
+YT_KEY="thay-key-cua-ban-vao-day" 
 
 # File đầu vào
 AUDIO_INPUT="news_audio.mp3"

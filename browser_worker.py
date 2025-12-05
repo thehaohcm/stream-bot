@@ -6,10 +6,12 @@ import time
 # Cấu hình Chrome
 options = Options()
 options.add_argument("--no-sandbox")
-options.add_argument("--kiosk")  # Chế độ Fullscreen tuyệt đối
+options.add_argument("--disable-dev-shm-usage") # <--- DÒNG QUAN TRỌNG MỚI THÊM
+options.add_argument("--disable-gpu") # Tắt GPU phần cứng vì VPS không có
+options.add_argument("--kiosk")
 options.add_argument("--disable-infobars")
-options.add_argument("--window-size=1280,720") # Khớp với độ phân giải Xvfb
-options.add_argument("--autoplay-policy=no-user-gesture-required") # Cho phép web tự chạy video/nhạc nếu có
+options.add_argument("--window-size=1280,720")
+options.add_argument("--autoplay-policy=no-user-gesture-required")
 
 # URL muốn livestream (Bạn có thể đổi thành TradingView hoặc bất kỳ web nào)
 # Ví dụ: Bản đồ nhiệt thanh lý của Coinglass (Giao diện tối)
