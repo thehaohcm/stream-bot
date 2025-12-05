@@ -15,7 +15,9 @@ options.add_argument("--autoplay-policy=no-user-gesture-required")
 
 # URL muốn livestream (Bạn có thể đổi thành TradingView hoặc bất kỳ web nào)
 # Ví dụ: Bản đồ nhiệt thanh lý của Coinglass (Giao diện tối)
-TARGET_URL = "https://www.coinglass.com/pro/futures/LiquidationHeatMap"
+# TARGET_URL = "https://www.coinglass.com/pro/futures/LiquidationHeatMap"
+
+TARGET_URL = "https://www.usdebtclock.org/world-debt-clock.html"
 
 def start_browser():
     print("Dang khoi dong Chrome...")
