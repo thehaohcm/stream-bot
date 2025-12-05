@@ -26,6 +26,8 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+RUN wget -O font.ttf https://github.com/google/fonts/raw/main/apache/roboto/Roboto-Bold.ttf
+
 # 5. Copy source code
 COPY . .
 

@@ -12,10 +12,10 @@ sleep 5
 
 # 3. Khởi động Twitter Worker (NEW)
 echo "[3/4] Starting Twitter News Aggregator..."
-python3 twitter_worker.py
+python3 twitter_worker.py &
 
 # 3. Tạo file news.txt giả để ffmpeg không lỗi
-echo "Bản tin Crypto 24/7 - Cập nhật liên tục từ hệ thống AI..." > news.txt
+echo "Bản tin Crypto 24/7 - Cập nhật liên tục từ hệ thống AI..." > news_display.txt
 
 # 4. Chạy Livestream (Chạy chính, không & để giữ container sống)
 # Lưu ý: Bạn cần cấp quyền thực thi: chmod +x stream.sh
