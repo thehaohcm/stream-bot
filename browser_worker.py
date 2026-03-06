@@ -17,22 +17,28 @@ options.add_experimental_option('useAutomationExtension', False)
 
 # URL muốn livestream (Bạn có thể đổi thành TradingView hoặc bất kỳ web nào)
 # Ví dụ: Bản đồ nhiệt thanh lý của Coinglass (Giao diện tối)
-# TARGET_URL = "https://www.coinglass.com/pro/futures/LiquidationHeatMap"
-
-TARGET_URL = "https://www.usdebtclock.org/world-debt-clock.html"
+TARGET_URLS = [
+    "https://stockchart.vietstock.vn/",
+    "https://mihong.vn/gia-vang-trong-nuoc",
+    "https://www.binance.com/en/trade/BTC_USDT?type=spot"
+]
 
 def start_browser():
     print("Dang khoi dong Chrome...")
     driver = webdriver.Chrome(options=options)
     
     try:
-        driver.get(TARGET_URL)
-        print(f"Da mo trang: {TARGET_URL}")
-        
-        # Giữ trình duyệt luôn mở
+        current_index = 0
         while True:
-            time.sleep(60) # Cứ 60s kiểm tra một lần (hoặc reload nếu cần)
-            # Có thể thêm logic tự động cuộn trang hoặc chuyển tab tại đây
+            target = TARGET_URLS[current_index]
+            driver.get(target)
+            print(f"Da mo trang: {target}")
+            
+            # Giữ trang hiện hành trong 60s
+            time.sleep(60) 
+            
+            # Chuyển sang URL tiếp theo
+            current_index = (current_index + 1) % len(TARGET_URLS)
             
     except Exception as e:
         print(f"Loi Browser: {e}")
