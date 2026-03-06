@@ -46,8 +46,8 @@ async def text_to_speech_smart(text):
     # 3. Atomic Move
     if success and os.path.exists(TEMP_FILE):
         shutil.move(TEMP_FILE, FINAL_FILE)
-        print(f"[TTS-Success] ✅ Đã cập nhật file audio: {FINAL_FILE}")
+        print(f"[TTS-Success] Đã cập nhật file audio: {FINAL_FILE}")
         return True
     else:
-        print("[TTS-Fail] ❌ Không tạo được file audio.")
+        print("[TTS-Fail] Không tạo được file audio.")
         return False
