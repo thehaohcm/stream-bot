@@ -5,6 +5,7 @@ from bs4 import BeautifulSoup
 import tts_worker
 import time
 import os
+import re
 import random
 import threading
 from datetime import datetime
@@ -153,6 +154,26 @@ def schedule_clear_display(delay: int = 120):
     t.start()
 
 
+# ── Text helpers ──────────────────────────────────────────────────────────────
+
+def clean_title(text: str) -> str:
+    """Xóa emoji và ký tự đặc biệt không đọc được, chuẩn hóa khoảng trắng."""
+    # Xóa emoji SMP (4-byte: 🔴 🟢 🎉 v.v.)
+    text = re.sub(r'[\U00010000-\U0010ffff]', '', text, flags=re.UNICODE)
+    # Xóa emoji / ký hiệu trong BMP (▫ ▪ ● ○ ◆ ★ v.v.)
+    text = re.sub(
+        r'[\u2000-\u27FF\u2900-\u2DFF\u3000-\u303F\uFE00-\uFE6F\uFFFC-\uFFFF]',
+        '', text, flags=re.UNICODE
+    )
+    return ' '.join(text.split())
+
+
+def for_display(text: str) -> str:
+    """Escape ký tự đặc biệt để FFmpeg drawtext không bị lỗi."""
+    # % → %% tránh bị hiểu là format specifier
+    return text.replace('%', '%%')
+
+
 # ── Main loop ─────────────────────────────────────────────────────────────────
 
 async def process_news():
@@ -191,18 +212,21 @@ async def process_news():
         print("\n[Skip] Không có tin mới từ tất cả các nguồn.")
         return
 
-    # --- Cập nhật hiển thị ---
-    display_content = f"TIN TỨC: {datetime.now().strftime('%H:%M %d/%m')}\n"
+    # Làm sạch tiêu đề: xóa emoji
+    clean_titles = [clean_title(t) for t in new_titles]
+
+    # --- Cập nhật hiển thị (tự xóa sau 2 phút) ---
+    display_content = f"TIN TUC: {datetime.now().strftime('%H:%M %d/%m')}\n"
     display_content += "-" * 40 + "\n"
-    for title in new_titles:
-        display_content += f"• {title}\n\n"
+    for title in clean_titles:
+        display_content += f"- {for_display(title)}\n\n"
     update_display_file(display_content)
     schedule_clear_display(120)
-    print(f"\n[File] Cập nhật {DISPLAY_FILE} với {len(new_titles)} tin (tự xóa sau 2 phút)")
+    print(f"\n[File] Cập nhật {DISPLAY_FILE} với {len(clean_titles)} tin (tự xóa sau 2 phút)")
 
     # --- TTS ---
     audio_text = "Tin tức mới nhất. "
-    for i, title in enumerate(new_titles, 1):
+    for i, title in enumerate(clean_titles, 1):
         audio_text += f"Tin {i}: {title}. "
     await tts_worker.text_to_speech_smart(audio_text)
 
