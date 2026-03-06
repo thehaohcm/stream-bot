@@ -17,7 +17,7 @@ echo "Hệ thống đang khởi động... Vui lòng chờ cập nhật tin tứ
 
 # Tạo 1 đoạn audio chào mừng ban đầu thay vì im lặng
 echo "[Init] Creating welcome audio..."
-python3 -c "import asyncio, tts_worker; asyncio.run(tts_worker.text_to_speech_smart('Chào mừng các bạn đến với livestream hỏi đáp cùng AI. Hãy để lại bình luận để trò chuyện với mình nhé.'))"
+python3 -c "import asyncio, tts_worker; asyncio.run(tts_worker.text_to_speech_smart('Chào mừng các bạn đến với livestream hỏi đáp đầu tư cùng AI. Hãy để lại bình luận để trò chuyện với mình nhé.'))"
 
 # Khởi động Audio Mixer (Tạo named pipe và stream audio liên tục để không crash FFmpeg)
 echo "[Audio] Starting Audio Mixer..."
