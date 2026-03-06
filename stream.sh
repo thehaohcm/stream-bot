@@ -15,7 +15,7 @@ echo "Bat dau Livestream len Youtube..."
 # Auto-reconnect loop: restarts FFmpeg whenever RTMP drops
 while true; do
     echo "[Stream] Starting FFmpeg..."
-    ffmpeg -y \
+    ffmpeg -y -loglevel error \
         -thread_queue_size 4096 -probesize 42M -f x11grab -draw_mouse 0 -video_size 1280x720 -framerate 30 -i :99 \
         -thread_queue_size 4096 -f s16le -ar 44100 -ac 2 -i /app/audio_pipe \
         -c:v libx264 -preset veryfast -tune zerolatency -maxrate 2500k -bufsize 5000k -pix_fmt yuv420p -g 60 \

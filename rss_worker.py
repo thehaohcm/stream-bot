@@ -157,7 +157,7 @@ def schedule_clear_display(delay: int = 120):
 # ── Text helpers ──────────────────────────────────────────────────────────────
 
 def clean_title(text: str) -> str:
-    """Xóa emoji và ký tự đặc biệt không đọc được, chuẩn hóa khoảng trắng."""
+    """Xóa emoji, ký hiệu đặc biệt, và các ký tự gây lỗi FFmpeg drawtext."""
     # Xóa emoji SMP (4-byte: 🔴 🟢 🎉 v.v.)
     text = re.sub(r'[\U00010000-\U0010ffff]', '', text, flags=re.UNICODE)
     # Xóa emoji / ký hiệu trong BMP (▫ ▪ ● ○ ◆ ★ v.v.)
@@ -165,12 +165,13 @@ def clean_title(text: str) -> str:
         r'[\u2000-\u27FF\u2900-\u2DFF\u3000-\u303F\uFE00-\uFE6F\uFFFC-\uFFFF]',
         '', text, flags=re.UNICODE
     )
+    # Xóa % để tránh lỗi 'Stray %' của FFmpeg drawtext
+    text = text.replace('%', ' phan tram')
     return ' '.join(text.split())
 
 
 def for_display(text: str) -> str:
-    """Escape ký tự đặc biệt để FFmpeg drawtext không bị lỗi."""
-    # % → %% tránh bị hiểu là format specifier
+    """Safety net: escape ký tự đặc biệt để FFmpeg drawtext không bị lỗi."""
     return text.replace('%', '%%')
 
 
