@@ -214,8 +214,8 @@ async def process_news():
         print("\n[Skip] Không có tin mới từ tất cả các nguồn.")
         return
 
-    # Làm sạch tiêu đề: xóa emoji
-    clean_titles = [clean_title(t) for t in new_titles]
+    # Làm sạch tiêu đề: xóa emoji, bỏ qua title rỗng sau khi clean
+    clean_titles = [ct for t in new_titles if (ct := clean_title(t))]
 
     # --- Cập nhật hiển thị (tự xóa sau 2 phút) ---
     wrapper = textwrap.TextWrapper(width=55, subsequent_indent='  ')
