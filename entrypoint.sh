@@ -29,9 +29,9 @@ echo "[2/4] Starting Browser..."
 python3 browser_worker.py &
 sleep 5
 
-# 4. Khởi động Twitter Worker (Background - Vòng lặp lấy tin)
-echo "[3/4] Starting Twitter News Aggregator..."
-python3 twitter_worker.py &
+# 4. Khởi động RSS News Reader (Background - Vòng lặp lấy tin)
+echo "[3/4] Starting RSS News Reader..."
+python3 rss_worker.py &
 
 # Khởi động YouTube AI Worker (Background - Đọc bot chat)
 echo "[YouTube AI] Starting YouTube Comment Reader..."

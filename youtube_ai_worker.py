@@ -77,7 +77,7 @@ def format_text_for_screen(username, question, answer):
     for line in wrapper.wrap(question):
         display_content += f"{line}\n"
         
-    display_content += f"\nAI trả lời:\n"
+    display_content += f"\nTrả lời:\n"
     for line in wrapper.wrap(answer):
         display_content += f"{line}\n"
         
@@ -86,6 +86,13 @@ def format_text_for_screen(username, question, answer):
 def update_display_file(content):
     with open(DISPLAY_FILE, "w", encoding="utf-8") as f:
         f.write(content)
+
+async def clear_display_after_delay(delay: int = 120):
+    """Xóa nội dung file hiển thị sau `delay` giây."""
+    await asyncio.sleep(delay)
+    with open(DISPLAY_FILE, "w", encoding="utf-8") as f:
+        f.write("")
+    print(f"[Display] Đã xóa màn hình sau {delay}s.")
 
 def detect_stock_code(message: str):
     """Trả về mã cổ phiếu nếu message có hỏi về cổ phiếu, ngược lại trả None."""
@@ -149,9 +156,10 @@ async def check_chat():
                 answer = generate_ai_response(question)
                 print(f"[YouTube AI] Trả lời: {answer}")
                 
-                # Update screen
+                # Update screen (tự xóa sau 2 phút)
                 screen_text = format_text_for_screen(username, question, answer)
                 update_display_file(screen_text)
+                asyncio.create_task(clear_display_after_delay(120))
                 
                 # Update TTS
                 audio_text = f"Trong comment có bạn hỏi: {question}. Mình xin trả lời: {answer}"
