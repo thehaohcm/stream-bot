@@ -34,8 +34,10 @@ RUN wget -q -O bg_lofi.mp3 "https://www.soundhelix.com/examples/mp3/SoundHelix-S
 # 5. Copy source code
 COPY . .
 
-# 6. Cấp quyền chạy cho script khởi động
-RUN chmod +x entrypoint.sh
+# 6. Fix Windows line endings (CRLF -> LF) and set execute permissions
+RUN apt-get install -y dos2unix \
+    && dos2unix entrypoint.sh stream.sh \
+    && chmod +x entrypoint.sh stream.sh
 
 # 7. Lệnh chạy mặc định
 ENTRYPOINT ["./entrypoint.sh"]

@@ -8,100 +8,139 @@ except ImportError:
 
 PIPE_PATH = '/app/audio_pipe'
 BG_MUSIC_PATH = 'bg_lofi.mp3'
+SAMPLE_RATE = 44100
+CHANNELS = 2
+SAMPLE_WIDTH = 2  # bytes (16-bit)
+BYTES_PER_SEC = SAMPLE_RATE * CHANNELS * SAMPLE_WIDTH  # 176400 bytes/sec
+CHUNK_DURATION = 0.1  # seconds
+CHUNK_SIZE = int(BYTES_PER_SEC * CHUNK_DURATION)  # 17640 bytes per 0.1s chunk
+SILENCE = b'\x00' * CHUNK_SIZE
 
 # Create named pipe if it doesn't exist
 if not os.path.exists(PIPE_PATH):
     os.mkfifo(PIPE_PATH)
 
-# Load background music
+# Load background music once at startup
 bg_audio = None
 if os.path.exists(BG_MUSIC_PATH):
     print(f"[Audio Mixer] Loading background music: {BG_MUSIC_PATH}")
     bg_audio = AudioSegment.from_mp3(BG_MUSIC_PATH)
-    bg_audio = bg_audio.set_frame_rate(44100).set_channels(2).set_sample_width(2)
+    bg_audio = bg_audio.set_frame_rate(SAMPLE_RATE).set_channels(CHANNELS).set_sample_width(SAMPLE_WIDTH)
+    bg_raw = bg_audio.raw_data
+    bg_len = len(bg_raw)
+    print(f"[Audio Mixer] Background music loaded: {bg_len} bytes ({bg_len / BYTES_PER_SEC:.1f}s)")
+else:
+    bg_raw = None
+    bg_len = 0
+    print("[Audio Mixer] No background music found, will stream silence.")
 
-print("[Audio Mixer] Waiting for FFmpeg to open pipe...")
-with open(PIPE_PATH, 'wb') as pipe:
-    print("[Audio Mixer] Pipe opened! Streaming audio...")
-    chunk_size = int(44100 * 2 * 2 * 0.1) # 0.1s chunks
-    silence = b'\x00' * chunk_size
-    
-    bg_pos = 0 # Track position in background audio
-    
-    while True:
-        try:
-            # CHECK FOR NEW AI VOICE AUDIO
-            if os.path.exists('news_audio.mp3'):
-                time.sleep(0.5) # Wait briefly to ensure another process has finished writing to the file
-                
-                print("[Audio Mixer] Playing Voice OVER Background: news_audio.mp3")
-                voice_audio = AudioSegment.from_mp3('news_audio.mp3')
-                voice_audio = voice_audio.set_frame_rate(44100).set_channels(2).set_sample_width(2)
-                
-                # Duck background music by 15dB and overlay voice
-                if bg_audio:
-                    # Extract the chunk of background music corresponding to voice audio length
-                    voice_duration_ms = len(voice_audio)
-                    bg_chunk_ms = bg_audio[int(bg_pos/44100/4*1000) : int(bg_pos/44100/4*1000) + voice_duration_ms]
-                    
-                    # If bg_chunk is shorter than voice (end of song), loop it
-                    while len(bg_chunk_ms) < voice_duration_ms:
-                        bg_chunk_ms += bg_audio[: voice_duration_ms - len(bg_chunk_ms)]
-                        
-                    # Lower background volume and overlay
-                    ducked_bg = bg_chunk_ms - 15  # Reduce volume by 15dB
-                    mixed_audio = ducked_bg.overlay(voice_audio)
-                    
-                    raw_mix = mixed_audio.raw_data
-                    
-                    # Write the mixed audio
-                    for i in range(0, len(raw_mix), chunk_size):
-                        pipe.write(raw_mix[i:i+chunk_size])
+
+def write_realtime(pipe, raw_data):
+    """Write PCM bytes to pipe at real-time pace to avoid flooding FFmpeg's buffer."""
+    total = len(raw_data)
+    written = 0
+    while written < total:
+        end = min(written + CHUNK_SIZE, total)
+        chunk = raw_data[written:end]
+        pipe.write(chunk)
+        pipe.flush()
+        written = end
+        time.sleep(CHUNK_DURATION)
+
+
+def get_bg_chunk(bg_pos, length_bytes):
+    """Extract `length_bytes` of background audio from position bg_pos, looping as needed."""
+    if not bg_raw:
+        return b'\x00' * length_bytes, bg_pos
+    result = bytearray()
+    pos = bg_pos
+    while len(result) < length_bytes:
+        remaining = length_bytes - len(result)
+        available = bg_len - pos
+        take = min(remaining, available)
+        result.extend(bg_raw[pos:pos + take])
+        pos = (pos + take) % bg_len
+    return bytes(result), pos
+
+
+# Main loop: reconnects pipe whenever FFmpeg restarts
+while True:
+    print("[Audio Mixer] Waiting for FFmpeg to open pipe...")
+    try:
+        with open(PIPE_PATH, 'wb') as pipe:
+            print("[Audio Mixer] Pipe opened! Streaming audio...")
+            bg_pos = 0
+
+            while True:
+                try:
+                    # --- Voice-over: mix voice with ducked background ---
+                    if os.path.exists('news_audio.mp3'):
+                        time.sleep(0.3)  # brief wait to ensure file is fully written
+                        print("[Audio Mixer] Playing Voice OVER Background: news_audio.mp3")
+
+                        try:
+                            voice_audio = AudioSegment.from_mp3('news_audio.mp3')
+                            voice_audio = voice_audio.set_frame_rate(SAMPLE_RATE).set_channels(CHANNELS).set_sample_width(SAMPLE_WIDTH)
+                        except Exception as e:
+                            print(f"[Audio Mixer] Failed to decode news_audio.mp3: {e}")
+                            try:
+                                os.rename('news_audio.mp3', 'news_audio_bad.mp3')
+                            except Exception:
+                                pass
+                            continue
+
+                        voice_len = len(voice_audio.raw_data)
+
+                        if bg_raw:
+                            bg_chunk_bytes, bg_pos = get_bg_chunk(bg_pos, voice_len)
+                            bg_segment = AudioSegment(
+                                data=bg_chunk_bytes,
+                                sample_width=SAMPLE_WIDTH,
+                                frame_rate=SAMPLE_RATE,
+                                channels=CHANNELS,
+                            )
+                            ducked_bg = bg_segment - 15  # reduce bg volume by 15 dB
+                            mixed = ducked_bg.overlay(voice_audio)
+                            raw_mix = mixed.raw_data
+                        else:
+                            raw_mix = voice_audio.raw_data
+
+                        # Write at real-time pace so FFmpeg buffer stays healthy
+                        write_realtime(pipe, raw_mix)
+
+                        os.remove('news_audio.mp3')
+                        print("[Audio Mixer] Played and deleted news_audio.mp3")
+                        continue
+
+                    # --- Background music / silence ---
+                    if bg_raw:
+                        end_pos = bg_pos + CHUNK_SIZE
+                        if end_pos <= bg_len:
+                            chunk = bg_raw[bg_pos:end_pos]
+                            bg_pos = end_pos
+                        else:
+                            chunk = bg_raw[bg_pos:] + bg_raw[:end_pos - bg_len]
+                            bg_pos = end_pos - bg_len
+                        pipe.write(chunk)
                         pipe.flush()
-                        
-                    # Advance background music pointer
-                    bg_pos = (bg_pos + len(raw_mix)) % len(bg_audio.raw_data)
-                else:
-                    # No background music, just play voice
-                    raw = voice_audio.raw_data
-                    for i in range(0, len(raw), chunk_size):
-                        pipe.write(raw[i:i+chunk_size])
+                    else:
+                        pipe.write(SILENCE)
                         pipe.flush()
-                
-                os.remove('news_audio.mp3')
-                print("[Audio Mixer] Played and deleted news_audio.mp3")
-                continue
-                
-            # PLAY BACKGROUND MUSIC CONTINUOUSLY
-            if bg_audio:
-                # Read a chunk of background audio
-                raw_bg = bg_audio.raw_data
-                end_pos = bg_pos + chunk_size
-                
-                if end_pos <= len(raw_bg):
-                    play_chunk = raw_bg[bg_pos:end_pos]
-                    bg_pos = end_pos
-                else:
-                    # Loop around
-                    play_chunk = raw_bg[bg_pos:] + raw_bg[:end_pos - len(raw_bg)]
-                    bg_pos = end_pos - len(raw_bg)
-                    
-                pipe.write(play_chunk)
-                pipe.flush()
-            else:
-                # Fallback to silence if no background music
-                pipe.write(silence)
-                pipe.flush()
-                
-            # Sleep slightly to prevent burning 100% CPU on fast pipe writes
-            time.sleep(0.09)
-            
-        except BrokenPipeError:
-            print("[Audio Mixer] Pipe broken, FFmpeg stopped reading. Exiting...")
-            break
-        except Exception as e:
-            print(f"[Audio Mixer] Loop Error: {e}")
-            if os.path.exists('news_audio.mp3'):
-                try: os.rename('news_audio.mp3', 'news_audio_bad.mp3')
-                except: pass
-            time.sleep(1)
+
+                    time.sleep(CHUNK_DURATION)
+
+                except BrokenPipeError:
+                    print("[Audio Mixer] Pipe broken (FFmpeg stopped). Waiting for FFmpeg to restart...")
+                    break  # Exit inner loop → re-open pipe
+                except Exception as e:
+                    print(f"[Audio Mixer] Loop error: {e}")
+                    if os.path.exists('news_audio.mp3'):
+                        try:
+                            os.rename('news_audio.mp3', 'news_audio_bad.mp3')
+                        except Exception:
+                            pass
+                    time.sleep(1)
+
+    except OSError as e:
+        print(f"[Audio Mixer] Could not open pipe: {e}. Retrying in 2s...")
+        time.sleep(2)

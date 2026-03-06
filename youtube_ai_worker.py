@@ -64,16 +64,13 @@ def generate_ai_response(prompt):
         return "Xin lỗi hệ thống AI đang gặp sự cố."
 
 def format_text_for_screen(username, question, answer):
-    display_content = f"Q&A: {datetime.now().strftime('%H:%M %d/%m')}\n"
-    display_content += "-" * 40 + "\n"
-    
     wrapper = textwrap.TextWrapper(width=50)
-    
-    display_content += f"👤 {username} hỏi:\n"
+
+    display_content = f"{username} hỏi:\n"
     for line in wrapper.wrap(question):
         display_content += f"{line}\n"
         
-    display_content += f"\n🤖 AI trả lời:\n"
+    display_content += f"\nAI trả lời:\n"
     for line in wrapper.wrap(answer):
         display_content += f"{line}\n"
         
