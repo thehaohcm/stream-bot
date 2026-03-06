@@ -7,6 +7,7 @@ import time
 import os
 import re
 import random
+import textwrap
 import threading
 from datetime import datetime
 
@@ -217,10 +218,12 @@ async def process_news():
     clean_titles = [clean_title(t) for t in new_titles]
 
     # --- Cập nhật hiển thị (tự xóa sau 2 phút) ---
+    wrapper = textwrap.TextWrapper(width=55, subsequent_indent='  ')
     display_content = f"TIN TUC: {datetime.now().strftime('%H:%M %d/%m')}\n"
     display_content += "-" * 40 + "\n"
     for title in clean_titles:
-        display_content += f"- {for_display(title)}\n\n"
+        wrapped = wrapper.fill(for_display(title))
+        display_content += f"- {wrapped}\n\n"
     update_display_file(display_content)
     schedule_clear_display(120)
     print(f"\n[File] Cập nhật {DISPLAY_FILE} với {len(clean_titles)} tin (tự xóa sau 2 phút)")
