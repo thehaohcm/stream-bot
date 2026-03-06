@@ -10,3 +10,4 @@ openai
 python-dotenv
 feedparser
 requests
+beautifulsoup4

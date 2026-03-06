@@ -1,6 +1,7 @@
 import asyncio
 import feedparser
 import requests
+from bs4 import BeautifulSoup
 import tts_worker
 import time
 import os
@@ -9,69 +10,138 @@ import threading
 from datetime import datetime
 
 # --- CẤU HÌNH ---
-RSS_URLS = [
-    "https://rsshub.rssforever.com/telegram/channel/vnwallstreet",
-    "https://rsshub.rssforever.com/telegram/channel/tintucvnws",
+# Cặp (channel_name, danh sách RSS mirror URL để thử lần lượt)
+CHANNELS = [
+    {
+        "name": "vnwallstreet",
+        "rss_mirrors": [
+            "https://rsshub.app/telegram/channel/vnwallstreet",
+            "https://rss.shab.fun/telegram/channel/vnwallstreet",
+            "https://rsshub.feeded.xyz/telegram/channel/vnwallstreet",
+            "https://rsshub.rssforever.com/telegram/channel/vnwallstreet",
+        ],
+        "telegram_url": "https://t.me/s/vnwallstreet",
+    },
+    {
+        "name": "tintucvnws",
+        "rss_mirrors": [
+            "https://rsshub.app/telegram/channel/tintucvnws",
+            "https://rss.shab.fun/telegram/channel/tintucvnws",
+            "https://rsshub.feeded.xyz/telegram/channel/tintucvnws",
+            "https://rsshub.rssforever.com/telegram/channel/tintucvnws",
+        ],
+        "telegram_url": "https://t.me/s/tintucvnws",
+    },
 ]
+
 CHECK_INTERVAL_MIN = 180  # 3 phút
 CHECK_INTERVAL_MAX = 300  # 5 phút
 LAST_LINKS_FILE = "last_news_links.txt"
 DISPLAY_FILE = "news_display.txt"
+REQUEST_TIMEOUT = 10  # giây
 
-# User-Agent giả lập browser để tránh bị block
 HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (X11; Linux x86_64) "
         "AppleWebKit/537.36 (KHTML, like Gecko) "
         "Chrome/120.0.0.0 Safari/537.36"
     ),
-    "Accept": "application/rss+xml, application/xml, text/xml, */*",
+    "Accept": "application/rss+xml, application/xml, text/xml, text/html, */*",
 }
 
 
-def fetch_feed(url: str):
-    """Fetch RSS bằng requests (có User-Agent) rồi parse bằng feedparser."""
+# ── Fetch helpers ─────────────────────────────────────────────────────────────
+
+def fetch_via_rss(url: str):
+    """Thử fetch RSS từ một mirror. Trả về list (link, title) hoặc None nếu lỗi."""
     try:
-        resp = requests.get(url, headers=HEADERS, timeout=15)
+        resp = requests.get(url, headers=HEADERS, timeout=REQUEST_TIMEOUT)
         resp.raise_for_status()
         feed = feedparser.parse(resp.content)
-        return feed
-    except requests.exceptions.RequestException as e:
-        print(f"[RSS] Lỗi network khi fetch {url}: {e}")
-        return None
+        if not feed.entries:
+            return None
+        entries = []
+        for e in feed.entries[:5]:
+            link = (getattr(e, "link", "") or getattr(e, "id", "")).strip()
+            title = getattr(e, "title", "").strip()
+            if link and title:
+                entries.append((link, title))
+        return entries if entries else None
     except Exception as e:
-        print(f"[RSS] Lỗi parse {url}: {e}")
+        print(f"    [mirror] {url} → lỗi: {type(e).__name__}: {e}")
         return None
 
+
+def fetch_via_telegram_web(telegram_url: str):
+    """Fallback: scrape trang t.me/s/<channel> trực tiếp."""
+    try:
+        resp = requests.get(telegram_url, headers=HEADERS, timeout=REQUEST_TIMEOUT)
+        resp.raise_for_status()
+        soup = BeautifulSoup(resp.text, "html.parser")
+        entries = []
+        for msg_div in soup.select(".tgme_widget_message")[:5]:
+            # Lấy link định danh bài
+            link_tag = msg_div.get("data-post") or ""
+            if link_tag:
+                link = f"https://t.me/{link_tag}"
+            else:
+                a = msg_div.select_one("a.tgme_widget_message_date")
+                link = a["href"] if a else ""
+
+            text_div = msg_div.select_one(".tgme_widget_message_text")
+            title = text_div.get_text(" ", strip=True)[:200] if text_div else ""
+
+            if link and title:
+                entries.append((link, title))
+        return entries if entries else None
+    except Exception as e:
+        print(f"    [t.me scrape] {telegram_url} → lỗi: {type(e).__name__}: {e}")
+        return None
+
+
+def get_entries_for_channel(channel: dict):
+    """Thử lần lượt các RSS mirror, fallback sang t.me scrape."""
+    for mirror in channel["rss_mirrors"]:
+        print(f"  [Try RSS] {mirror}")
+        entries = fetch_via_rss(mirror)
+        if entries:
+            print(f"  [OK] Lấy được {len(entries)} entries từ {mirror}")
+            return entries
+
+    # Tất cả mirror hỏng → thử t.me
+    print(f"  [Fallback] Thử scrape {channel['telegram_url']}")
+    entries = fetch_via_telegram_web(channel["telegram_url"])
+    if entries:
+        print(f"  [OK] Scrape được {len(entries)} entries từ t.me")
+    return entries
+
+
+# ── Display helpers ───────────────────────────────────────────────────────────
 
 def load_last_links():
-    """Đọc dict {url: last_link} từ file."""
     result = {}
     if os.path.exists(LAST_LINKS_FILE):
         with open(LAST_LINKS_FILE, "r", encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if "|" in line:
-                    url, link = line.split("|", 1)
-                    result[url] = link
+                    key, link = line.split("|", 1)
+                    result[key] = link
     return result
 
 
 def save_last_links(links_dict):
-    """Ghi dict {url: last_link} ra file."""
     with open(LAST_LINKS_FILE, "w", encoding="utf-8") as f:
-        for url, link in links_dict.items():
-            f.write(f"{url}|{link}\n")
+        for key, link in links_dict.items():
+            f.write(f"{key}|{link}\n")
 
 
 def update_display_file(content):
-    """Ghi nội dung hiển thị ra file text."""
     with open(DISPLAY_FILE, "w", encoding="utf-8") as f:
         f.write(content)
 
 
 def _clear_display_after_delay(delay: int = 120):
-    """Chạy trong thread riêng: xóa file hiển thị sau `delay` giây."""
     time.sleep(delay)
     with open(DISPLAY_FILE, "w", encoding="utf-8") as f:
         f.write("")
@@ -79,89 +149,73 @@ def _clear_display_after_delay(delay: int = 120):
 
 
 def schedule_clear_display(delay: int = 120):
-    """Kick off background thread để tự xóa màn hình sau delay giây."""
     t = threading.Thread(target=_clear_display_after_delay, args=(delay,), daemon=True)
     t.start()
 
 
+# ── Main loop ─────────────────────────────────────────────────────────────────
+
 async def process_news():
-    print(f"\n[Check] Đang kiểm tra tin mới lúc {datetime.now().strftime('%H:%M:%S')}...")
+    print(f"\n[Check] Kiểm tra tin mới lúc {datetime.now().strftime('%H:%M:%S')}...")
 
     last_links = load_last_links()
+    updated_links = dict(last_links)
     new_titles = []
-    updated_links = dict(last_links)  # copy để cập nhật
 
-    for rss_url in RSS_URLS:
-        try:
-            feed = fetch_feed(rss_url)
-            if feed is None or not feed.entries:
-                print(f"[Skip] Không lấy được tin từ: {rss_url}")
-                continue
+    for channel in CHANNELS:
+        name = channel["name"]
+        print(f"\n[Channel] @{name}")
+        entries = get_entries_for_channel(channel)
 
-            print(f"[RSS] Lấy được {len(feed.entries)} entries từ {rss_url}")
-
-            latest_entry = feed.entries[0]
-            latest_link = (
-                getattr(latest_entry, "link", "")
-                or getattr(latest_entry, "id", "")
-            ).strip()
-            last_link = last_links.get(rss_url, "")
-
-            print(f"[RSS] latest_link = {latest_link!r}")
-            print(f"[RSS] last_link   = {last_link!r}")
-
-            if latest_link and latest_link == last_link:
-                print(f"[Skip] Không có tin mới từ {rss_url}")
-                continue
-
-            print(f"[Update] 🔥 Tin mới từ {rss_url}!")
-
-            # Lấy tối đa 2 tin mỗi nguồn
-            for entry in feed.entries[:2]:
-                title = getattr(entry, "title", "").strip()
-                if title:
-                    new_titles.append(title)
-
-            # Cập nhật link mới nhất
-            if latest_link:
-                updated_links[rss_url] = latest_link
-
-        except Exception as e:
-            print(f"[Error] Lỗi xử lý {rss_url}: {e} — bỏ qua.")
+        if not entries:
+            print(f"  [Skip] Không lấy được dữ liệu cho @{name}")
             continue
 
+        latest_link, latest_title = entries[0]
+        last_link = last_links.get(name, "")
+
+        print(f"  latest_link = {latest_link!r}")
+        print(f"  last_link   = {last_link!r}")
+
+        if latest_link == last_link:
+            print(f"  [Skip] Không có tin mới.")
+            continue
+
+        # Lấy tối đa 2 tin mới nhất
+        for link, title in entries[:2]:
+            new_titles.append(title)
+
+        updated_links[name] = latest_link
+
     if not new_titles:
-        print("[Skip] Không có tin mới từ tất cả các nguồn.")
+        print("\n[Skip] Không có tin mới từ tất cả các nguồn.")
         return
 
-    # --- Cập nhật hiển thị (tự xóa sau 2 phút) ---
+    # --- Cập nhật hiển thị ---
     display_content = f"TIN TỨC: {datetime.now().strftime('%H:%M %d/%m')}\n"
     display_content += "-" * 40 + "\n"
     for title in new_titles:
         display_content += f"• {title}\n\n"
     update_display_file(display_content)
     schedule_clear_display(120)
-    print(f"[File] Đã cập nhật {DISPLAY_FILE} với {len(new_titles)} tin (sẽ tự xóa sau 2 phút)")
+    print(f"\n[File] Cập nhật {DISPLAY_FILE} với {len(new_titles)} tin (tự xóa sau 2 phút)")
 
-    # --- Đọc to trên livestream ---
+    # --- TTS ---
     audio_text = "Tin tức mới nhất. "
     for i, title in enumerate(new_titles, 1):
         audio_text += f"Tin {i}: {title}. "
-
     await tts_worker.text_to_speech_smart(audio_text)
 
-    # --- Lưu lại links sau khi đã phát ---
     save_last_links(updated_links)
     print("[Save] Đã lưu last_news_links.txt")
 
 
 if __name__ == "__main__":
-    # Xóa cache link cũ khi khởi động để đảm bảo đọc tin ngay lập tức
+    # Reset trạng thái cũ khi khởi động
     if os.path.exists(LAST_LINKS_FILE):
         os.remove(LAST_LINKS_FILE)
-        print(f"[Init] Đã xóa {LAST_LINKS_FILE} để reset trạng thái.")
+        print(f"[Init] Đã xóa {LAST_LINKS_FILE} để reset.")
 
-    # Tạo file display rỗng nếu chưa có để FFmpeg không lỗi lúc đầu
     if not os.path.exists(DISPLAY_FILE):
         with open(DISPLAY_FILE, "w", encoding="utf-8") as f:
             f.write("Đang tải dữ liệu...")
@@ -170,7 +224,7 @@ if __name__ == "__main__":
         try:
             asyncio.run(process_news())
             interval = random.randint(CHECK_INTERVAL_MIN, CHECK_INTERVAL_MAX)
-            print(f"--- Chờ {interval} giây ({interval // 60} phút {interval % 60} giây) ---")
+            print(f"\n--- Chờ {interval}s ({interval // 60}p{interval % 60}s) ---")
             time.sleep(interval)
         except KeyboardInterrupt:
             break
