@@ -1,5 +1,6 @@
-import feedparser
 import asyncio
+import feedparser
+import requests
 import tts_worker
 import time
 import os
@@ -12,10 +13,35 @@ RSS_URLS = [
     "https://rsshub.rssforever.com/telegram/channel/vnwallstreet",
     "https://rsshub.rssforever.com/telegram/channel/tintucvnws",
 ]
-CHECK_INTERVAL_MIN = 180  # 3 phút (giây)
-CHECK_INTERVAL_MAX = 300  # 5 phút (giây)
-LAST_LINKS_FILE = "last_news_links.txt"  # Lưu link mới nhất của từng feed
+CHECK_INTERVAL_MIN = 180  # 3 phút
+CHECK_INTERVAL_MAX = 300  # 5 phút
+LAST_LINKS_FILE = "last_news_links.txt"
 DISPLAY_FILE = "news_display.txt"
+
+# User-Agent giả lập browser để tránh bị block
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (X11; Linux x86_64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/120.0.0.0 Safari/537.36"
+    ),
+    "Accept": "application/rss+xml, application/xml, text/xml, */*",
+}
+
+
+def fetch_feed(url: str):
+    """Fetch RSS bằng requests (có User-Agent) rồi parse bằng feedparser."""
+    try:
+        resp = requests.get(url, headers=HEADERS, timeout=15)
+        resp.raise_for_status()
+        feed = feedparser.parse(resp.content)
+        return feed
+    except requests.exceptions.RequestException as e:
+        print(f"[RSS] Lỗi network khi fetch {url}: {e}")
+        return None
+    except Exception as e:
+        print(f"[RSS] Lỗi parse {url}: {e}")
+        return None
 
 
 def load_last_links():
@@ -43,12 +69,14 @@ def update_display_file(content):
     with open(DISPLAY_FILE, "w", encoding="utf-8") as f:
         f.write(content)
 
+
 def _clear_display_after_delay(delay: int = 120):
     """Chạy trong thread riêng: xóa file hiển thị sau `delay` giây."""
     time.sleep(delay)
     with open(DISPLAY_FILE, "w", encoding="utf-8") as f:
         f.write("")
     print(f"[Display] Đã xóa màn hình sau {delay}s.")
+
 
 def schedule_clear_display(delay: int = 120):
     """Kick off background thread để tự xóa màn hình sau delay giây."""
@@ -61,35 +89,45 @@ async def process_news():
 
     last_links = load_last_links()
     new_titles = []
+    updated_links = dict(last_links)  # copy để cập nhật
 
     for rss_url in RSS_URLS:
         try:
-            feed = feedparser.parse(rss_url)
-            if not feed.entries:
-                print(f"[Skip] Không lấy được tin từ {rss_url}")
+            feed = fetch_feed(rss_url)
+            if feed is None or not feed.entries:
+                print(f"[Skip] Không lấy được tin từ: {rss_url}")
                 continue
 
+            print(f"[RSS] Lấy được {len(feed.entries)} entries từ {rss_url}")
+
             latest_entry = feed.entries[0]
-            latest_link = getattr(latest_entry, "link", "") or getattr(latest_entry, "id", "")
+            latest_link = (
+                getattr(latest_entry, "link", "")
+                or getattr(latest_entry, "id", "")
+            ).strip()
             last_link = last_links.get(rss_url, "")
 
-            if latest_link == last_link:
+            print(f"[RSS] latest_link = {latest_link!r}")
+            print(f"[RSS] last_link   = {last_link!r}")
+
+            if latest_link and latest_link == last_link:
                 print(f"[Skip] Không có tin mới từ {rss_url}")
                 continue
 
             print(f"[Update] 🔥 Tin mới từ {rss_url}!")
 
-            # Lấy tin mới nhất (tối đa 2 tin mỗi nguồn)
+            # Lấy tối đa 2 tin mỗi nguồn
             for entry in feed.entries[:2]:
                 title = getattr(entry, "title", "").strip()
                 if title:
                     new_titles.append(title)
 
             # Cập nhật link mới nhất
-            last_links[rss_url] = latest_link
+            if latest_link:
+                updated_links[rss_url] = latest_link
 
         except Exception as e:
-            print(f"[Error] Lỗi đọc RSS {rss_url}: {e} — bỏ qua.")
+            print(f"[Error] Lỗi xử lý {rss_url}: {e} — bỏ qua.")
             continue
 
     if not new_titles:
@@ -103,7 +141,7 @@ async def process_news():
         display_content += f"• {title}\n\n"
     update_display_file(display_content)
     schedule_clear_display(120)
-    print("[File] Đã cập nhật news_display.txt (sẽ tự xóa sau 2 phút)")
+    print(f"[File] Đã cập nhật {DISPLAY_FILE} với {len(new_titles)} tin (sẽ tự xóa sau 2 phút)")
 
     # --- Đọc to trên livestream ---
     audio_text = "Tin tức mới nhất. "
@@ -112,11 +150,17 @@ async def process_news():
 
     await tts_worker.text_to_speech_smart(audio_text)
 
-    # --- Lưu lại links ---
-    save_last_links(last_links)
+    # --- Lưu lại links sau khi đã phát ---
+    save_last_links(updated_links)
+    print("[Save] Đã lưu last_news_links.txt")
 
 
 if __name__ == "__main__":
+    # Xóa cache link cũ khi khởi động để đảm bảo đọc tin ngay lập tức
+    if os.path.exists(LAST_LINKS_FILE):
+        os.remove(LAST_LINKS_FILE)
+        print(f"[Init] Đã xóa {LAST_LINKS_FILE} để reset trạng thái.")
+
     # Tạo file display rỗng nếu chưa có để FFmpeg không lỗi lúc đầu
     if not os.path.exists(DISPLAY_FILE):
         with open(DISPLAY_FILE, "w", encoding="utf-8") as f:
@@ -126,7 +170,7 @@ if __name__ == "__main__":
         try:
             asyncio.run(process_news())
             interval = random.randint(CHECK_INTERVAL_MIN, CHECK_INTERVAL_MAX)
-            print(f"--- Chờ {interval} giây ({interval//60} phút {interval%60} giây) ---")
+            print(f"--- Chờ {interval} giây ({interval // 60} phút {interval % 60} giây) ---")
             time.sleep(interval)
         except KeyboardInterrupt:
             break

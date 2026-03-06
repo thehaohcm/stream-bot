@@ -8,3 +8,5 @@ pytchat
 google-generativeai
 openai
 python-dotenv
+feedparser
+requests
