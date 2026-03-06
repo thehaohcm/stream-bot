@@ -4,6 +4,7 @@
 YT_URL="rtmp://a.rtmp.youtube.com/live2"
 # YT_KEY is injected from .env via: docker run --env-file .env ...
 # Kiểm tra xem YT_KEY đã được truyền vào chưa
+YT_KEY=""
 if [ -z "$YT_KEY" ]; then
     echo "LỖI: YT_KEY không tồn tại. Hãy kiểm tra file .env hoặc Docker config."
     exit 1

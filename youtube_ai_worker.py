@@ -1,4 +1,5 @@
 import os
+import re
 import time
 import asyncio
 import textwrap
@@ -17,7 +18,13 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 GROK_API_KEY = os.getenv("GROK_API_KEY", "")
 
 DISPLAY_FILE = "news_display.txt"
+STOCK_SIGNAL_FILE = "stock_signal.txt"  # File giao tiếp với browser_worker
 COOLDOWN_SECONDS = 15 # Chỉ nhận câu hỏi 15s/lần để tránh spam
+
+# Regex nhận dạng mã cổ phiếu: 2-5 ký tự chữ hoa, đứng độc lập trong câu
+STOCK_CODE_PATTERN = re.compile(r'\b([A-Z]{2,5})\b')
+# Từ khoá gợi ý người dùng đang hỏi về cổ phiếu
+STOCK_KEYWORDS = ["cổ phiếu", "cp", "stock", "chart", "biểu đồ", "giá", "mua", "bán", "phân tích"]
 
 # Khởi tạo API Clients
 ai_client = None
@@ -80,6 +87,21 @@ def update_display_file(content):
     with open(DISPLAY_FILE, "w", encoding="utf-8") as f:
         f.write(content)
 
+def detect_stock_code(message: str):
+    """Trả về mã cổ phiếu nếu message có hỏi về cổ phiếu, ngược lại trả None."""
+    msg_lower = message.lower()
+    has_stock_keyword = any(kw in msg_lower for kw in STOCK_KEYWORDS)
+    matches = STOCK_CODE_PATTERN.findall(message)
+    if matches and (has_stock_keyword or len(matches) == 1):
+        return matches[0]  # Lấy mã đầu tiên tìm được
+    return None
+
+def signal_stock_to_browser(stock_code: str):
+    """Ghi mã cổ phiếu vào file để browser_worker đọc và hiển thị chart."""
+    with open(STOCK_SIGNAL_FILE, "w", encoding="utf-8") as f:
+        f.write(stock_code)
+    print(f"[Stock Signal] Đã ghi tín hiệu mã cổ phiếu: {stock_code}")
+
 async def check_chat():
     if not VIDEO_ID:
         print("[YouTube AI] Lỗi: Chưa cấu hình YT_VIDEO_ID trong file .env")
@@ -114,6 +136,14 @@ async def check_chat():
                     
                 print(f"[YouTube AI] Đang trả lời {username}: {question}")
                 last_answered_time = now
+
+                # Kiểm tra có hỏi về mã cổ phiếu không
+                stock_code = detect_stock_code(question)
+                if stock_code:
+                    print(f"[Stock] Phát hiện mã cổ phiếu: {stock_code}")
+                    signal_stock_to_browser(stock_code)
+                    # Thêm context mã cổ phiếu vào câu hỏi cho AI
+                    question = f"Phân tích cổ phiếu {stock_code}: {question}"
                 
                 # Gọi AI
                 answer = generate_ai_response(question)
