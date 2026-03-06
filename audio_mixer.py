@@ -8,6 +8,8 @@ except ImportError:
 
 PIPE_PATH = '/app/audio_pipe'
 BG_MUSIC_PATH = 'bg_lofi.mp3'
+BG_VOLUME_DB = -10       # Giảm âm lượng nhạc nền (dB âm = nhỏ hơn, thử -15 đến -25)
+BG_DUCK_DB   = -20       # Giảm thêm khi có giọng đọc (tổng = BG_VOLUME_DB + BG_DUCK_DB)
 SAMPLE_RATE = 44100
 CHANNELS = 2
 SAMPLE_WIDTH = 2  # bytes (16-bit)
@@ -26,6 +28,7 @@ if os.path.exists(BG_MUSIC_PATH):
     print(f"[Audio Mixer] Loading background music: {BG_MUSIC_PATH}")
     bg_audio = AudioSegment.from_mp3(BG_MUSIC_PATH)
     bg_audio = bg_audio.set_frame_rate(SAMPLE_RATE).set_channels(CHANNELS).set_sample_width(SAMPLE_WIDTH)
+    bg_audio = bg_audio + BG_VOLUME_DB  # Áp dụng giảm âm lượng tổng thể
     bg_raw = bg_audio.raw_data
     bg_len = len(bg_raw)
     print(f"[Audio Mixer] Background music loaded: {bg_len} bytes ({bg_len / BYTES_PER_SEC:.1f}s)")
@@ -99,7 +102,7 @@ while True:
                                 frame_rate=SAMPLE_RATE,
                                 channels=CHANNELS,
                             )
-                            ducked_bg = bg_segment - 15  # reduce bg volume by 15 dB
+                            ducked_bg = bg_segment + BG_DUCK_DB  # duck bg during voice-over
                             mixed = ducked_bg.overlay(voice_audio)
                             raw_mix = mixed.raw_data
                         else:

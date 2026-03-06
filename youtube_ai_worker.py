@@ -43,7 +43,7 @@ else:
 
 def generate_ai_response(prompt):
     try:
-        system_instruction = "Bạn là trợ lý AI trên livestream. Hãy trả lời câu hỏi ngắn gọn, tối đa 3 câu và dễ hiểu khi đọc bằng giọng nói."
+        system_instruction = "Bạn là chuyên viên phân tích chứng khoán, crypto, hàng hóa. Hãy trả lời câu hỏi ngắn gọn, tối đa 3 câu và dễ hiểu khi đọc bằng giọng nói."
         
         if USE_GEMINI:
             response = ai_client.generate_content(system_instruction + " Câu hỏi: " + prompt)
