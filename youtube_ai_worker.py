@@ -87,7 +87,7 @@ def update_display_file(content):
     with open(DISPLAY_FILE, "w", encoding="utf-8") as f:
         f.write(content)
 
-async def clear_display_after_delay(delay: int = 120):
+async def clear_display_after_delay(delay: int = 60):
     """Xóa nội dung file hiển thị sau `delay` giây."""
     await asyncio.sleep(delay)
     with open(DISPLAY_FILE, "w", encoding="utf-8") as f:
@@ -159,7 +159,7 @@ async def check_chat():
                 # Update screen (tự xóa sau 2 phút)
                 screen_text = format_text_for_screen(username, question, answer)
                 update_display_file(screen_text)
-                asyncio.create_task(clear_display_after_delay(120))
+                asyncio.create_task(clear_display_after_delay(60))
                 
                 # Update TTS
                 audio_text = f"Trong comment có bạn hỏi: {question}. Mình xin trả lời: {answer}"

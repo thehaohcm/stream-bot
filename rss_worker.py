@@ -143,14 +143,14 @@ def update_display_file(content):
         f.write(content)
 
 
-def _clear_display_after_delay(delay: int = 120):
+def _clear_display_after_delay(delay: int = 60):
     time.sleep(delay)
     with open(DISPLAY_FILE, "w", encoding="utf-8") as f:
         f.write("")
     print(f"[Display] Đã xóa màn hình sau {delay}s.")
 
 
-def schedule_clear_display(delay: int = 120):
+def schedule_clear_display(delay: int = 60):
     t = threading.Thread(target=_clear_display_after_delay, args=(delay,), daemon=True)
     t.start()
 
@@ -225,7 +225,7 @@ async def process_news():
         wrapped = wrapper.fill(for_display(title))
         display_content += f"- {wrapped}\n\n"
     update_display_file(display_content)
-    schedule_clear_display(120)
+    schedule_clear_display(60)
     print(f"\n[File] Cập nhật {DISPLAY_FILE} với {len(clean_titles)} tin (tự xóa sau 2 phút)")
 
     # --- TTS ---
