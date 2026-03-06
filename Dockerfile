@@ -28,6 +28,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 RUN apt-get update && apt-get install -y wget iputils-ping
 RUN wget -O font.ttf https://github.com/googlefonts/roboto/raw/main/src/hinted/Roboto-Bold.ttf
 
+# Tải nhạc nền Lofi
+RUN wget -q -O bg_lofi.mp3 "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+# (Lưu ý: Bạn có thể thay URL trên bằng link tải nhạc lofi mp3 của riêng bạn)
 # 5. Copy source code
 COPY . .
 

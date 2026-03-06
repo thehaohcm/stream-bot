@@ -127,7 +127,7 @@ async def check_chat():
                 update_display_file(screen_text)
                 
                 # Update TTS
-                audio_text = f"Bạn {username} hỏi: {question}. Khách mời AI xin trả lời: {answer}"
+                audio_text = f"Trong comment có bạn hỏi: {question}. Mình xin trả lời: {answer}"
                 await tts_worker.text_to_speech_smart(audio_text)
             
             # Nghỉ một chút trước khi lấy chat tiếp theo
