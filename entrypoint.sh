@@ -11,23 +11,30 @@ echo "[1/4] Starting Xvfb..."
 Xvfb :99 -ac -screen 0 1280x720x24 &
 sleep 2
 
-# 2. KHá»žI Táº O FILE DUMMY (Quan trá»ng nháº¥t Ä‘á»ƒ FFmpeg khÃ´ng crash)
 # Táº¡o file text máº·c Ä‘á»‹nh
-echo "Há»‡ thá»‘ng Ä‘ang khá»Ÿi Ä‘á»™ng... Vui lÃ²ng chá» cáº­p nháº­t tin tá»©c..." > news_display.txt
+echo "Há»‡ thá»‘ng Ä‘ang khá»Ÿi Ä‘á»™ng... Vui lÃ²ng chá»  cáº­p nháº­t tin tá»©c..." > news_display.txt
 
-# Táº¡o file audio máº·c Ä‘á»‹nh (1 giÃ¢y im láº·ng) Ä‘á»ƒ FFmpeg cÃ³ cÃ¡i mÃ  Ä‘á»c ngay láº­p tá»©c
-# Náº¿u khÃ´ng cÃ³ bÆ°á»›c nÃ y, FFmpeg sáº½ bÃ¡o "No such file" vÃ  sáº­p trÆ°á»›c khi Twitter Worker cháº¡y xong.
-echo "[Init] Creating dummy audio..."
-ffmpeg -f lavfi -i anullsrc=r=44100:cl=mono -t 1 -q:a 9 -acodec libmp3lame news_audio.mp3 -y
+# Tạo 1 đoạn audio chào mừng ban đầu thay vì im lặng
+echo "[Init] Creating welcome audio..."
+python3 -c "import asyncio, tts_worker; asyncio.run(tts_worker.text_to_speech_smart('Chào mừng các bạn đến với luồng trực tiếp. Hãy để lại bình luận để trò chuyện với AI nhé.'))"
+
+# Khởi động Audio Mixer (Tạo named pipe và stream audio liên tục để không crash FFmpeg)
+echo "[Audio] Starting Audio Mixer..."
+python3 audio_mixer.py &
+sleep 2
 
 # 3. Khá»Ÿi Ä‘á»™ng Browser (Cháº¡y ngáº§m)
 echo "[2/4] Starting Browser..."
 python3 browser_worker.py &
 sleep 5
 
-# 4. Khá»Ÿi Ä‘á»™ng Twitter Worker (Cháº¡y ngáº§m - VÃ²ng láº·p láº¥y tin)
+# 4. Khởi động Twitter Worker (Chạy ngầm - Vòng lặp lấy tin)
 echo "[3/4] Starting Twitter News Aggregator..."
 python3 twitter_worker.py &
+
+# Khởi động YouTube AI Worker (Chạy ngầm - Đọc bot chat)
+echo "[YouTube AI] Starting YouTube Comment Reader..."
+python3 youtube_ai_worker.py &
 
 # 5. Cháº¡y Livestream (Process chÃ­nh giá»¯ container)
 echo "[4/4] Starting Stream..."
