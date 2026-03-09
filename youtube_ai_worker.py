@@ -2,6 +2,7 @@ import os
 import re
 import time
 import asyncio
+import requests
 import textwrap
 import pytchat
 from datetime import datetime
@@ -15,8 +16,8 @@ load_dotenv()
 
 # --- CẤU HÌNH ---
 VIDEO_ID = os.getenv("YT_VIDEO_ID", "")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-GROK_API_KEY = os.getenv("GROK_API_KEY", "")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+GROQ_CLIENT_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 DISPLAY_FILE = "news_display.txt"
 STOCK_SIGNAL_FILE = "stock_signal.txt"  # File giao tiếp với browser_worker
@@ -27,46 +28,39 @@ STOCK_CODE_PATTERN = re.compile(r'\b([A-Z]{2,5})\b')
 # Từ khoá gợi ý người dùng đang hỏi về cổ phiếu
 STOCK_KEYWORDS = ["cổ phiếu", "cp", "stock", "chart", "biểu đồ", "giá", "mua", "bán", "phân tích"]
 
-# Khởi tạo API Clients
-ai_client = None
-USE_GEMINI = False
-USE_GROK = False
 
-if GEMINI_API_KEY:
-    import google.generativeai as genai
-    genai.configure(api_key=GEMINI_API_KEY)
-    ai_client = genai.GenerativeModel('gemini-flash-latest')
-    USE_GEMINI = True
-    print("[AI Setup] Sử dụng Gemini AI")
-elif GROK_API_KEY:
-    import openai
-    ai_client = openai.OpenAI(
-        api_key=GROK_API_KEY,
-        base_url="https://api.x.ai/v1",
-    )
-    USE_GROK = True
-    print("[AI Setup] Sử dụng Grok AI")
+if GROQ_API_KEY:
+    print("[AI Setup] Sử dụng Groq AI")
 else:
-    print("[AI Setup] CẢNH BÁO: Chưa cấu hình GEMINI_API_KEY hoặc GROK_API_KEY.")
+    print("[AI Setup] CẢNH BÁO: Chưa cấu hình GROQ_API_KEY.")
 
 def generate_ai_response(prompt):
+    if not GROQ_API_KEY:
+        return "Xin lỗi, AI chưa được cài đặt API Key."
+
     try:
-        system_instruction = "{current time} Bạn là chuyên viên phân tích chứng khoán, crypto, hàng hóa. Hãy trả lời câu hỏi ngắn gọn, tối đa 3 câu và dễ hiểu khi đọc bằng giọng nói."
+        system_instruction = f"Bạn là chuyên viên phân tích chứng khoán, crypto, hàng hóa. Hãy trả lời câu hỏi ngắn gọn, tối đa 3 câu và dễ hiểu khi đọc bằng giọng nói."
         
-        if USE_GEMINI:
-            response = ai_client.generate_content(system_instruction + " Câu hỏi: " + prompt)
-            return response.text.replace("*", "").strip()
-        elif USE_GROK:
-            response = ai_client.chat.completions.create(
-                model="grok-beta",
-                messages=[
-                    {"role": "system", "content": system_instruction},
-                    {"role": "user", "content": prompt},
-                ]
-            )
-            return response.choices[0].message.content.strip()
-        else:
-            return "Xin lỗi, AI chưa được cài đặt API Key."
+        headers = {
+            "Authorization": f"Bearer {GROQ_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        
+        payload = {
+            "model": "llama-3.1-8b-instant",
+            "messages": [
+                {"role": "system", "content": system_instruction},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0.7
+        }
+
+        response = requests.post(GROQ_CLIENT_URL, headers=headers, json=payload, timeout=60)
+        response.raise_for_status()
+        data = response.json()
+        content = data["choices"][0]["message"]["content"]
+        
+        return content.replace("*", "").strip()
     except Exception as e:
         print(f"[AI Error] Lỗi gọi AI: {e}")
         return "Xin lỗi hệ thống AI đang gặp sự cố."
