@@ -1,6 +1,8 @@
-edge-tts>=6.1.9
+edge-tts==6.1.9
 yfinance>=0.2.40
-gTTS
+gTTS==2.4.0
+schedule==1.2.1
+pytz==2024.1
 aiofiles
 selenium
 webdriver-manager

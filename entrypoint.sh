@@ -45,6 +45,10 @@ python3 market_worker.py &
 echo "[Subscribe] Starting Subscribe Worker (every 15min)..."
 python3 subscribe_worker.py &
 
+# Khởi động Daily Program Worker (Tạo nội dung VOD vào khung giờ cố định)
+echo "[Daily Program] Starting Scheduled AI Talkshows..."
+python3 daily_program_worker.py &
+
 # 5. Chạy Livestream (Process chính giữ container)
 echo "[4/4] Starting Stream..."
 # Cấp quyền thực thi cho chắc chắn
