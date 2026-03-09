@@ -5,6 +5,7 @@ import asyncio
 import requests
 import textwrap
 import pytchat
+import json
 from datetime import datetime
 from dotenv import load_dotenv
 
@@ -28,6 +29,8 @@ STOCK_CODE_PATTERN = re.compile(r'\b([A-Z]{2,5})\b')
 # Từ khoá gợi ý người dùng đang hỏi về cổ phiếu
 STOCK_KEYWORDS = ["cổ phiếu", "cp", "stock", "chart", "biểu đồ", "giá", "mua", "bán", "phân tích"]
 
+POLL_SIGNAL_FILE = "poll_signal.txt"
+POLL_DATA_FILE = "poll_data.json"
 
 if GROQ_API_KEY:
     print("[AI Setup] Sử dụng Groq AI")
@@ -104,6 +107,33 @@ def signal_stock_to_browser(stock_code: str):
         f.write(stock_code)
     print(f"[Stock Signal] Đã ghi tín hiệu mã cổ phiếu: {stock_code}")
 
+def reset_poll():
+    """Tạo file tín hiệu poll và reset dữ liệu json cho biểu quyết mới."""
+    data = {"1": 0, "2": 0, "total": 0}
+    with open(POLL_DATA_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f)
+    with open(POLL_SIGNAL_FILE, "w", encoding="utf-8") as f:
+        f.write("show")
+    print("[Poll Signal] Đã kích hoạt biểu quyết mới!")
+
+def update_poll(vote: str):
+    """Cập nhật dữ liệu biểu quyết nếu tuỳ chọn hợp lệ."""
+    if not os.path.exists(POLL_DATA_FILE):
+        return
+        
+    try:
+        with open(POLL_DATA_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            
+        if vote in data:
+            data[vote] += 1
+            data["total"] += 1
+            with open(POLL_DATA_FILE, "w", encoding="utf-8") as f:
+                json.dump(data, f)
+            print(f"[Poll] Đã nhận được 1 lượt bình chọn cho phương án {vote}.")
+    except Exception as e:
+        print(f"[Poll Error] {e}")
+
 async def check_chat():
     if not VIDEO_ID:
         print("[YouTube AI] Lỗi: Chưa cấu hình YT_VIDEO_ID trong file .env")
@@ -124,13 +154,25 @@ async def check_chat():
                 msg = c.message.strip()
                 username = c.author.name
 
-                # Bỏ qua comment của chủ kênh
+                # Bỏ qua comment của chủ kênh (hoặc xử lý lệnh admin)
                 if c.author.isChatOwner:
+                    if msg.lower() == "!poll":
+                        reset_poll()
+                        continue
                     print(f"[Chat] Bỏ qua comment của chủ kênh ({username}): {msg}")
                     continue
                 
                 print(f"[Chat] {username}: {msg}")
                 
+                # Check nếu tin nhắn chỉ chứa số, có thể là vote biểu quyết
+                if msg.strip() in ["1", "2"] and os.path.exists(POLL_SIGNAL_FILE):
+                    update_poll(msg.strip())
+                    continue
+                
+                # Xử lý bỏ qua các msg chỉ thuần số (VD: 1, 2, 3...) bất kể lúc nào
+                if msg.strip().isdigit():
+                    continue
+
                 # Logic: Trả lời tất cả câu hỏi nhưng vẫn giữ cooldown để không bị spam quá nhanh.
                 # Cắt từ khoá gọi bot (nếu có) để AI tập trung vào câu hỏi
                 question = msg

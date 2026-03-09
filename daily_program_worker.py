@@ -6,6 +6,7 @@ import subprocess
 import requests
 import schedule
 import pytz
+from pydub import AudioSegment
 from datetime import datetime
 from dotenv import load_dotenv
 
@@ -153,6 +154,10 @@ async def generate_and_broadcast(title, dialogue):
     os.makedirs(temp_dir, exist_ok=True)
     audio_files = []
     
+    # Logic Timestamps
+    chapters = ["00:00 Phần mở đầu"]
+    current_duration_sec = 0
+    
     # File tiêu đề tổng
     header = f"=== {title.upper()} ===\n"
     
@@ -178,6 +183,10 @@ async def generate_and_broadcast(title, dialogue):
             with open("stock_signal.txt", "w", encoding="utf-8") as f:
                 f.write(found_stock)
             print(f"[Daily Worker] Phát hiện mã cổ phiếu {found_stock}, hiển thị chart lên màn hình.")
+            # Tạo Timestamp cho phần nhận định mã chứng khoán này
+            mins = int(current_duration_sec // 60)
+            secs = int(current_duration_sec % 60)
+            chapters.append(f"{mins:02d}:{secs:02d} Phân tích mã {found_stock}")
         
         # update display
         with open(DISPLAY_FILE, "w", encoding="utf-8") as f:
@@ -200,17 +209,30 @@ async def generate_and_broadcast(title, dialogue):
             shutil.copy("news_audio.mp3", vod_audio)
             audio_files.append(vod_audio)
             
+            # Tính duration của đoạn audio này để cộng vào Timestamps
+            try:
+                audio_seg = AudioSegment.from_mp3(vod_audio)
+                current_duration_sec += len(audio_seg) / 1000.0
+            except Exception as e:
+                print(f"[Daily Worker] Lỗi phân tích độ dài audio: {e}")
+            
         # Thêm chút time giữa các lượt thoại
         await asyncio.sleep(1) 
+        # Cộng thêm thời gian ngủ tĩnh vào tổng thời gian Timestamp
+        current_duration_sec += 1
+    
+    # Tổng hợp văn bản Chapters
+    chapters_text = "\n".join(chapters)
+    print("\n[Timestamps Được Tạo Tự Động]:\n" + chapters_text + "\n")
     
     print("[Daily Worker] Đã phát xong trên luồng Live. Đang render VOD...")
     # xóa màn hình
     with open(DISPLAY_FILE, "w", encoding="utf-8") as f:
         f.write("")
         
-    await render_and_upload_vod(title, temp_dir, audio_files)
+    await render_and_upload_vod(title, temp_dir, audio_files, chapters_text)
 
-async def render_and_upload_vod(title, temp_dir, audio_files):
+async def render_and_upload_vod(title, temp_dir, audio_files, chapters_text):
     if not audio_files:
         return
         
@@ -245,7 +267,7 @@ async def render_and_upload_vod(title, temp_dir, audio_files):
         
         if os.path.exists(output_mp4):
             print("[Daily Worker] Render xong, bắt đầu Upload YouTube...")
-            upload_to_youtube(video_title, output_mp4)
+            upload_to_youtube(video_title, output_mp4, chapters_text)
         else:
             print("[Daily Worker] Lỗi render mp4.")
     else:
@@ -255,16 +277,22 @@ async def render_and_upload_vod(title, temp_dir, audio_files):
     import shutil
     shutil.rmtree(temp_dir, ignore_errors=True)
 
-def upload_to_youtube(title, filepath):
+def upload_to_youtube(title, filepath, chapters_text):
     """Dùng youtube_chat_poster.get_youtube_service() để upload video!"""
     from googleapiclient.http import MediaFileUpload
     try:
         youtube = get_youtube_service()
         
+        desc = (
+            "Chương trình tự động phát hành bởi AI Stream Bot.\n\n"
+            "Nội dung chính yếu:\n"
+            f"{chapters_text}\n"
+        )
+        
         request_body = {
             "snippet": {
                 "title": title,
-                "description": "Chương trình tự động phát hành bởi AI Stream Bot.",
+                "description": desc,
                 "tags": ["Chứng Khoán", "Crypto", "Tài Chính", "AI"],
                 "categoryId": "27" # Education
             },
