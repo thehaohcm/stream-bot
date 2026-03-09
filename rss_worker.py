@@ -229,7 +229,7 @@ async def process_news():
     print(f"\n[File] Cập nhật {DISPLAY_FILE} với {len(clean_titles)} tin (tự xóa sau 2 phút)")
 
     # --- TTS ---
-    audio_text = "Breaking News. "
+    audio_text = "Tin Nóng."
     for i, title in enumerate(clean_titles, 1):
         audio_text += f"Tin {i}: {title}. "
     await tts_worker.text_to_speech_smart(audio_text)

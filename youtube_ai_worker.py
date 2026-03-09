@@ -159,13 +159,19 @@ async def check_chat():
                     print(f"[Stock] Phát hiện mã cổ phiếu: {stock_code}")
                     signal_stock_to_browser(stock_code)
                     # Thêm context mã cổ phiếu vào câu hỏi cho AI
-                    question = f"Phân tích cổ phiếu {stock_code}: {question}"
+                    question_for_ai = f"Phân tích cổ phiếu {stock_code}: {question}"
+                else:
+                    question_for_ai = question
                 
-                # Gọi AI
-                answer = generate_ai_response(question)
+                # Tạm hiển thị câu hỏi lên màn hình ngay lập tức trong lúc chờ AI phân tích
+                waiting_text = format_text_for_screen(username, question, "AI đang phân tích dữ liệu, vui lòng đợi một chút...")
+                update_display_file(waiting_text)
+                
+                # Gọi AI (quá trình này mất vài giây)
+                answer = generate_ai_response(question_for_ai)
                 print(f"[YouTube AI] Trả lời: {answer}")
                 
-                # Update screen (tự xóa sau 2 phút)
+                # Update screen với câu trả lời hoàn chỉnh
                 screen_text = format_text_for_screen(username, question, answer)
                 update_display_file(screen_text)
                 asyncio.create_task(clear_display_after_delay(60))
