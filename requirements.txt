@@ -1,4 +1,4 @@
-edge-tts==6.1.9
+edge-tts>=7.2.7
 yfinance>=0.2.40
 gTTS==2.4.0
 schedule==1.2.1
