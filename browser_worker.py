@@ -3,6 +3,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 import os
 import time
+from pathlib import Path
 
 # Cấu hình Chrome
 options = Options()
@@ -29,9 +30,17 @@ TARGET_URLS = [
 
 # File giao tiếp với youtube_ai_worker
 STOCK_SIGNAL_FILE = "stock_signal.txt"
+# File giao tiếp với subscribe_worker
+SUBSCRIBE_SIGNAL_FILE = "subscribe_signal.txt"
+
+# Trang hiển thị nhắc like/subscribe (đường dẫn tuyệt đối)
+_HERE = Path(__file__).parent.resolve()
+SUBSCRIBE_HTML = _HERE / "media" / "subscribe.html"
 
 # Thời gian giữ chart cổ phiếu trên màn hình (giây) trước khi quay lại vòng lặp
 STOCK_DISPLAY_SECONDS = 60
+# Thời gian giữ trang subscribe trên màn hình (giây)
+SUBSCRIBE_DISPLAY_SECONDS = 15
 # Thời gian giữ mỗi URL trong vòng lặp thông thường (giây)
 ROTATION_SECONDS = 60
 
@@ -54,6 +63,17 @@ def clear_stock_signal():
         os.remove(STOCK_SIGNAL_FILE)
 
 
+def read_subscribe_signal() -> bool:
+    """Trả về True nếu có tín hiệu subscribe đang chờ."""
+    return os.path.exists(SUBSCRIBE_SIGNAL_FILE)
+
+
+def clear_subscribe_signal():
+    """Xoá file tín hiệu subscribe sau khi đã xử lý."""
+    if os.path.exists(SUBSCRIBE_SIGNAL_FILE):
+        os.remove(SUBSCRIBE_SIGNAL_FILE)
+
+
 def start_browser():
     print("Dang khoi dong Chrome...")
     driver = webdriver.Chrome(options=options)
@@ -63,7 +83,28 @@ def start_browser():
 
     try:
         while True:
-            # --- Ưu tiên kiểm tra tín hiệu cổ phiếu ---
+            # --- Ưu tiên cao nhất: tín hiệu subscribe ---
+            if read_subscribe_signal():
+                clear_subscribe_signal()
+                subscribe_url = SUBSCRIBE_HTML.as_uri()  # file:///absolute/path/media/subscribe.html
+                print(f"[Subscribe Signal] Hiển thị trang subscribe: {subscribe_url}")
+                driver.get(subscribe_url)
+                last_url = subscribe_url
+
+                # Giữ trang subscribe trong SUBSCRIBE_DISPLAY_SECONDS, vẫn kiểm tra tín hiệu mỗi 2s
+                elapsed = 0
+                while elapsed < SUBSCRIBE_DISPLAY_SECONDS:
+                    time.sleep(2)
+                    elapsed += 2
+
+                # Quay lại URL thường
+                target = TARGET_URLS[current_index]
+                driver.get(target)
+                last_url = target
+                print(f"[Browser] Hết thời gian subscribe, quay về {target}")
+                continue  # Tiếp tục vòng lặp chính ngay (không bước current_index)
+
+            # --- Ưu tiên: tín hiệu cổ phiếu ---
             stock_code = read_stock_signal()
             if stock_code:
                 clear_stock_signal()

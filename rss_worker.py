@@ -219,7 +219,7 @@ async def process_news():
 
     # --- Cập nhật hiển thị (tự xóa sau 2 phút) ---
     wrapper = textwrap.TextWrapper(width=55, subsequent_indent='  ')
-    display_content = f"TIN TUC: {datetime.now().strftime('%H:%M %d/%m')}\n"
+    display_content = f"BREAKING NEWS: {datetime.now().strftime('%H:%M %d/%m')}\n"
     display_content += "-" * 40 + "\n"
     for title in clean_titles:
         wrapped = wrapper.fill(for_display(title))

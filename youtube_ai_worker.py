@@ -176,7 +176,7 @@ async def check_chat():
 
                 # Reply lên YouTube Live Chat
                 if yt_service and live_chat_id:
-                    reply_text = f"@{username}: {answer}"
+                    reply_text = f"{username}: {answer}"
                     await asyncio.get_event_loop().run_in_executor(
                         None, youtube_chat_poster.post_live_chat_message,
                         yt_service, live_chat_id, reply_text

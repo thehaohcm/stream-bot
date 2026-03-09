@@ -37,6 +37,14 @@ python3 rss_worker.py &
 echo "[YouTube AI] Starting YouTube Comment Reader..."
 python3 youtube_ai_worker.py &
 
+# Khởi động Market Worker (Background - Thông báo giá mỗi 30 phút)
+echo "[Market] Starting Market Worker (gold, BTC, VNIndex, S&P500, Nasdaq every 30min)..."
+python3 market_worker.py &
+
+# Khởi động Subscribe Worker (Background - Nhắc like/subscribe mỗi 15 phút)
+echo "[Subscribe] Starting Subscribe Worker (every 15min)..."
+python3 subscribe_worker.py &
+
 # 5. Chạy Livestream (Process chính giữ container)
 echo "[4/4] Starting Stream..."
 # Cấp quyền thực thi cho chắc chắn
