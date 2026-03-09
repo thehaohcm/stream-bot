@@ -91,18 +91,15 @@ def start_browser():
                 driver.get(subscribe_url)
                 last_url = subscribe_url
 
-                # Giữ trang subscribe trong SUBSCRIBE_DISPLAY_SECONDS, vẫn kiểm tra tín hiệu mỗi 2s
+                # Giữ trang subscribe trong SUBSCRIBE_DISPLAY_SECONDS
                 elapsed = 0
                 while elapsed < SUBSCRIBE_DISPLAY_SECONDS:
-                    time.sleep(2)
-                    elapsed += 2
+                    time.sleep(0.5)
+                    elapsed += 0.5
 
-                # Quay lại URL thường
-                target = TARGET_URLS[current_index]
-                driver.get(target)
-                last_url = target
-                print(f"[Browser] Hết thời gian subscribe, quay về {target}")
-                continue  # Tiếp tục vòng lặp chính ngay (không bước current_index)
+                # Xong thời gian subscribe, lập tức quay lại vòng lặp báo lại URL phù hợp
+                print(f"[Browser] Hết thời gian subscribe")
+                continue
 
             # --- Ưu tiên: tín hiệu cổ phiếu ---
             stock_code = read_stock_signal()
@@ -114,11 +111,17 @@ def start_browser():
                     driver.get(stock_url)
                     last_url = stock_url
 
-                # Giữ chart trong STOCK_DISPLAY_SECONDS, nhưng vẫn kiểm tra tín hiệu mới mỗi 2s
+                interrupted = False
+                # Giữ chart trong STOCK_DISPLAY_SECONDS, kiểm tra tín hiệu mới mỗi 2s
                 elapsed = 0
                 while elapsed < STOCK_DISPLAY_SECONDS:
-                    time.sleep(2)
-                    elapsed += 2
+                    time.sleep(0.5)
+                    elapsed += 0.5
+                    
+                    if read_subscribe_signal():
+                        interrupted = True
+                        break
+
                     new_signal = read_stock_signal()
                     if new_signal and new_signal != stock_code:
                         # Có mã mới -> xử lý ngay
@@ -130,12 +133,22 @@ def start_browser():
                         last_url = stock_url
                         elapsed = 0  # reset timer
 
+                if interrupted:
+                    continue
+
                 # Sau khi hết thời gian hiển thị, quay lại Vietstock mặc định
                 print(f"[Browser] Hết thời gian hiển thị chart, quay về {VIETSTOCK_BASE_URL}")
                 driver.get(VIETSTOCK_BASE_URL)
                 last_url = VIETSTOCK_BASE_URL
                 current_index = 0  # reset vòng lặp về đầu
-                time.sleep(ROTATION_SECONDS)
+                
+                # Giữ màn hình Vietstock chờ xem có tín hiệu khác không
+                elapsed = 0
+                while elapsed < ROTATION_SECONDS:
+                    time.sleep(0.5)
+                    elapsed += 0.5
+                    if read_subscribe_signal() or read_stock_signal():
+                        break
 
             else:
                 # --- Vòng lặp URL thông thường ---
@@ -147,13 +160,16 @@ def start_browser():
 
                 # Giữ trang trong ROTATION_SECONDS, kiểm tra tín hiệu mỗi 2s
                 elapsed = 0
+                interrupted = False
                 while elapsed < ROTATION_SECONDS:
-                    time.sleep(2)
-                    elapsed += 2
-                    if read_stock_signal():
-                        break  # Thoát sớm để xử lý tín hiệu
+                    time.sleep(0.5)
+                    elapsed += 0.5
+                    if read_subscribe_signal() or read_stock_signal():
+                        interrupted = True
+                        break
 
-                current_index = (current_index + 1) % len(TARGET_URLS)
+                if not interrupted:
+                    current_index = (current_index + 1) % len(TARGET_URLS)
 
     except Exception as e:
         print(f"Loi Browser: {e}")

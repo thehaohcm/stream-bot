@@ -46,6 +46,12 @@ async def text_to_speech_smart(text):
 
     # 3. Atomic Move
     if success and os.path.exists(TEMP_FILE):
+        # Chờ audio trước đọc xong (khi audio_mixer xóa file) tối đa 60 giây
+        wait_time = 0
+        while os.path.exists(FINAL_FILE) and wait_time < 60:
+            await asyncio.sleep(0.5)
+            wait_time += 0.5
+            
         shutil.move(TEMP_FILE, FINAL_FILE)
         print(f"[TTS-Success] Đã cập nhật file audio: {FINAL_FILE}")
         return True

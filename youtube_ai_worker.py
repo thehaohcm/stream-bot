@@ -154,15 +154,21 @@ async def check_chat():
                     signal_stock_to_browser(stock_code)
                     # Thêm context mã cổ phiếu vào câu hỏi cho AI
                     question_for_ai = f"Phân tích cổ phiếu {stock_code}: {question}"
+                    wait_audio_text = f"Chào {username}, hệ thống đang hiển thị biểu đồ và phân tích mã {stock_code}, bạn đợi một chút nhé."
                 else:
                     question_for_ai = question
+                    wait_audio_text = f"Chào {username}, hệ thống đang tải câu trả lời, bạn đợi một chút nhé."
                 
                 # Tạm hiển thị câu hỏi lên màn hình ngay lập tức trong lúc chờ AI phân tích
                 waiting_text = format_text_for_screen(username, question, "AI đang phân tích dữ liệu, vui lòng đợi một chút...")
                 update_display_file(waiting_text)
                 
-                # Gọi AI (quá trình này mất vài giây)
-                answer = generate_ai_response(question_for_ai)
+                # Phát âm thanh phản hồi ngay lập tức
+                await tts_worker.text_to_speech_smart(wait_audio_text)
+
+                # Gọi AI (quá trình này mất vài giây) - dùng executor để không block vòng lặp async
+                loop = asyncio.get_event_loop()
+                answer = await loop.run_in_executor(None, generate_ai_response, question_for_ai)
                 print(f"[YouTube AI] Trả lời: {answer}")
                 
                 # Update screen với câu trả lời hoàn chỉnh
@@ -171,7 +177,10 @@ async def check_chat():
                 asyncio.create_task(clear_display_after_delay(60))
                 
                 # Update TTS
-                audio_text = f"Trong comment có bạn hỏi: {question}. Mình xin trả lời: {answer}"
+                if stock_code:
+                    audio_text = f"Xin trả lời về mã {stock_code}. {answer}"
+                else:
+                    audio_text = f"Xin trả lời câu hỏi của {username}. {answer}"
                 await tts_worker.text_to_speech_smart(audio_text)
 
                 # Reply lên YouTube Live Chat
