@@ -10,9 +10,29 @@ if [ -z "$YT_KEY" ]; then
     exit 1
 fi
 
+# Thời gian hiển thị màn hình chờ thumbnail (giây), mặc định 120 giây
+WAITING_DURATION="${WAITING_DURATION:-120}"
+THUMBNAIL_PATH="/app/media/thumbnail.jpg"
+
 echo "Bat dau Livestream len Youtube..."
 
-# Auto-reconnect loop: restarts FFmpeg whenever RTMP drops
+# --- PHASE 1: Màn hình chờ với thumbnail tĩnh ---
+if [ -f "$THUMBNAIL_PATH" ]; then
+    echo "[Stream] Phat thumbnail man hinh cho trong $WAITING_DURATION giay..."
+    ffmpeg -y -loglevel error \
+        -loop 1 -i "$THUMBNAIL_PATH" \
+        -f lavfi -i anullsrc=r=44100:cl=stereo \
+        -c:v libx264 -preset veryfast -tune zerolatency -maxrate 2500k -bufsize 5000k -pix_fmt yuv420p -g 60 \
+        -vf "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2" \
+        -c:a aac -b:a 128k -ar 44100 \
+        -t "$WAITING_DURATION" \
+        -f flv "$YT_URL/$YT_KEY"
+    echo "[Stream] Man hinh cho ket thuc, chuyen sang stream chinh..."
+else
+    echo "[Stream] Khong tim thay thumbnail ($THUMBNAIL_PATH), bo qua man hinh cho."
+fi
+
+# --- PHASE 2: Stream chinh (vong lap tu dong ket noi lai) ---
 while true; do
     echo "[Stream] Starting FFmpeg..."
     ffmpeg -y -loglevel error \
