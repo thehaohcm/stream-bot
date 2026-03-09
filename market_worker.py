@@ -142,7 +142,7 @@ def build_announcement(prices: dict) -> tuple[str, str]:
     now = datetime.now().strftime("%H:%M %d/%m/%Y")
 
     lines_tts = [f"Cập nhật thị trường lúc {now}."]
-    lines_display = [f"THI TRUONG {now}", "-" * 40]
+    lines_display = [f"THỊ TRƯỜNG {now}", "-" * 40]
 
     def add(label_tts, label_display, value, unit, decimals=2):
         if value is not None:
