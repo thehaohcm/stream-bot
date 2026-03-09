@@ -231,6 +231,7 @@ async def process_news():
     # --- TTS ---
     audio_text = "Tin tức mới nhất. "
     for i, title in enumerate(clean_titles, 1):
+        title = title.replace("phan tram", "phần trăm")
         audio_text += f"Tin {i}: {title}. "
     await tts_worker.text_to_speech_smart(audio_text)
 

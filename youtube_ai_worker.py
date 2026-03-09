@@ -8,6 +8,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 
 import tts_worker
+import youtube_chat_poster
 
 # Load biến môi trường từ .env
 load_dotenv()
@@ -115,6 +116,9 @@ async def check_chat():
         return
 
     print(f"[YouTube AI] Bắt đầu lắng nghe chat từ Video ID: {VIDEO_ID}")
+
+    # Khởi tạo YouTube Chat Poster (nếu có token.json)
+    yt_service, live_chat_id = youtube_chat_poster.init_youtube_chat(VIDEO_ID)
     
     try:
         chat = pytchat.create(video_id=VIDEO_ID)
@@ -125,6 +129,11 @@ async def check_chat():
             for c in chat.get().sync_items():
                 msg = c.message.strip()
                 username = c.author.name
+
+                # Bỏ qua comment của chủ kênh
+                if c.author.isChatOwner:
+                    print(f"[Chat] Bỏ qua comment của chủ kênh ({username}): {msg}")
+                    continue
                 
                 print(f"[Chat] {username}: {msg}")
                 
@@ -164,6 +173,14 @@ async def check_chat():
                 # Update TTS
                 audio_text = f"Trong comment có bạn hỏi: {question}. Mình xin trả lời: {answer}"
                 await tts_worker.text_to_speech_smart(audio_text)
+
+                # Reply lên YouTube Live Chat
+                if yt_service and live_chat_id:
+                    reply_text = f"@{username}: {answer}"
+                    await asyncio.get_event_loop().run_in_executor(
+                        None, youtube_chat_poster.post_live_chat_message,
+                        yt_service, live_chat_id, reply_text
+                    )
             
             # Nghỉ một chút trước khi lấy chat tiếp theo
             await asyncio.sleep(2)

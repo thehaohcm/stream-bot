@@ -6,13 +6,14 @@ import os
 import shutil
 
 # --- CẤU HÌNH ---
-VOICE_EDGE = "vi-VN-NamMinhNeural" 
+VOICE_EDGE = "vi-VN-NamMinhNeural"
+VOICE_RATE = "+25%"  # x1.25 tốc độ đọc
 TEMP_FILE = "news_audio_temp.mp3"
 FINAL_FILE = "news_audio.mp3"
 
 async def _use_edge_tts(text, output_file):
     print(f"[Edge-TTS] Đang tạo audio...")
-    communicate = edge_tts.Communicate(text, VOICE_EDGE)
+    communicate = edge_tts.Communicate(text, VOICE_EDGE, rate=VOICE_RATE)
     await communicate.save(output_file)
 
 def _use_google_tts(text, output_file):
