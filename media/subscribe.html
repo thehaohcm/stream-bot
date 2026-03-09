@@ -1,12 +1,19 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Like & Subscribe</title>
   <style>
     /* ── Reset & base ── */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
     body {
       background: #0f0f0f;
@@ -23,15 +30,21 @@
       content: '';
       position: fixed;
       inset: 0;
-      background: radial-gradient(ellipse at 30% 40%, rgba(255,0,0,0.18) 0%, transparent 60%),
-                  radial-gradient(ellipse at 70% 70%, rgba(200,0,0,0.12) 0%, transparent 55%),
-                  #0f0f0f;
+      background: radial-gradient(ellipse at 30% 40%, rgba(255, 0, 0, 0.18) 0%, transparent 60%),
+        radial-gradient(ellipse at 70% 70%, rgba(200, 0, 0, 0.12) 0%, transparent 55%),
+        #0f0f0f;
       animation: bgPulse 4s ease-in-out infinite alternate;
       z-index: 0;
     }
+
     @keyframes bgPulse {
-      from { opacity: 0.7; }
-      to   { opacity: 1;   }
+      from {
+        opacity: 0.7;
+      }
+
+      to {
+        opacity: 1;
+      }
     }
 
     /* ── Card ── */
@@ -44,9 +57,17 @@
       gap: 32px;
       animation: cardIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
     }
+
     @keyframes cardIn {
-      from { transform: scale(0.7) translateY(40px); opacity: 0; }
-      to   { transform: scale(1)   translateY(0);    opacity: 1; }
+      from {
+        transform: scale(0.7) translateY(40px);
+        opacity: 0;
+      }
+
+      to {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+      }
     }
 
     /* ── Channel name ── */
@@ -55,7 +76,7 @@
       font-weight: 700;
       color: #fff;
       letter-spacing: 1px;
-      text-shadow: 0 0 20px rgba(255,60,60,0.6);
+      text-shadow: 0 0 20px rgba(255, 60, 60, 0.6);
     }
 
     /* ── Buttons row ── */
@@ -72,28 +93,45 @@
       gap: 12px;
       padding: 16px 36px;
       border-radius: 999px;
-      border: 2px solid rgba(255,255,255,0.15);
-      background: rgba(255,255,255,0.08);
+      border: 2px solid rgba(255, 255, 255, 0.15);
+      background: rgba(255, 255, 255, 0.08);
       color: #fff;
       font-size: 22px;
       font-weight: 700;
       cursor: pointer;
       animation: likeFloat 2s ease-in-out infinite;
-      box-shadow: 0 0 24px rgba(255,255,255,0.1);
+      box-shadow: 0 0 24px rgba(255, 255, 255, 0.1);
       backdrop-filter: blur(6px);
     }
+
     .btn-like .thumb {
       font-size: 32px;
       animation: thumbUp 1.5s ease-in-out infinite;
       display: inline-block;
     }
+
     @keyframes thumbUp {
-      0%, 100% { transform: translateY(0)   rotate(-5deg); }
-      50%       { transform: translateY(-8px) rotate(5deg); }
+
+      0%,
+      100% {
+        transform: translateY(0) rotate(-5deg);
+      }
+
+      50% {
+        transform: translateY(-8px) rotate(5deg);
+      }
     }
+
     @keyframes likeFloat {
-      0%, 100% { box-shadow: 0 0 24px rgba(255,255,255,0.10); }
-      50%       { box-shadow: 0 0 40px rgba(255,255,255,0.25); }
+
+      0%,
+      100% {
+        box-shadow: 0 0 24px rgba(255, 255, 255, 0.10);
+      }
+
+      50% {
+        box-shadow: 0 0 40px rgba(255, 255, 255, 0.25);
+      }
     }
 
     /* ── Subscribe button ── */
@@ -110,117 +148,180 @@
       font-weight: 700;
       cursor: pointer;
       animation: subPulse 1.8s ease-in-out infinite;
-      box-shadow: 0 0 30px rgba(255,0,0,0.4);
+      box-shadow: 0 0 30px rgba(255, 0, 0, 0.4);
     }
+
     .btn-subscribe .bell {
       font-size: 28px;
       display: inline-block;
       animation: bellRing 2s ease-in-out infinite;
       transform-origin: top center;
     }
+
     @keyframes bellRing {
-      0%, 100%  { transform: rotate(0deg);   }
-      10%, 30%  { transform: rotate(-20deg); }
-      20%, 40%  { transform: rotate(20deg);  }
-      50%       { transform: rotate(0deg);   }
+
+      0%,
+      100% {
+        transform: rotate(0deg);
+      }
+
+      10%,
+      30% {
+        transform: rotate(-20deg);
+      }
+
+      20%,
+      40% {
+        transform: rotate(20deg);
+      }
+
+      50% {
+        transform: rotate(0deg);
+      }
     }
+
     @keyframes subPulse {
-      0%, 100% { box-shadow: 0 0 30px rgba(255,0,0,0.40); transform: scale(1);    }
-      50%       { box-shadow: 0 0 50px rgba(255,0,0,0.65); transform: scale(1.04); }
+
+      0%,
+      100% {
+        box-shadow: 0 0 30px rgba(255, 0, 0, 0.40);
+        transform: scale(1);
+      }
+
+      50% {
+        box-shadow: 0 0 50px rgba(255, 0, 0, 0.65);
+        transform: scale(1.04);
+      }
     }
 
     /* ── Tagline ── */
     .tagline {
       font-size: 20px;
-      color: rgba(255,255,255,0.75);
+      color: rgba(255, 255, 255, 0.75);
       text-align: center;
       max-width: 600px;
       line-height: 1.5;
       animation: fadeIn 1s 0.4s ease both;
     }
+
     .tagline span {
       color: #ff4444;
       font-weight: 700;
     }
+
     @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to   { opacity: 1; transform: translateY(0);    }
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
     /* ── Particle sparkles ── */
-    .sparkles { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+    .sparkles {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+    }
+
     .sparkle {
       position: absolute;
-      width: 6px; height: 6px;
+      width: 6px;
+      height: 6px;
       border-radius: 50%;
       background: #ff4444;
       opacity: 0;
       animation: sparkle var(--dur, 3s) var(--delay, 0s) ease-in-out infinite;
     }
+
     @keyframes sparkle {
-      0%   { opacity: 0; transform: translateY(0)    scale(0.5); }
-      30%  { opacity: 1; }
-      100% { opacity: 0; transform: translateY(-120px) scale(0); }
+      0% {
+        opacity: 0;
+        transform: translateY(0) scale(0.5);
+      }
+
+      30% {
+        opacity: 1;
+      }
+
+      100% {
+        opacity: 0;
+        transform: translateY(-120px) scale(0);
+      }
     }
 
     /* ── Progress bar ── */
     .progress-bar {
       position: fixed;
-      bottom: 0; left: 0;
+      bottom: 0;
+      left: 0;
       height: 5px;
       background: linear-gradient(90deg, #ff0000, #ff6b6b);
       animation: progress var(--total, 15s) linear forwards;
-      box-shadow: 0 0 10px rgba(255,0,0,0.6);
+      box-shadow: 0 0 10px rgba(255, 0, 0, 0.6);
     }
+
     @keyframes progress {
-      from { width: 0%; }
-      to   { width: 100%; }
+      from {
+        width: 0%;
+      }
+
+      to {
+        width: 100%;
+      }
     }
   </style>
 </head>
+
 <body>
 
-<!-- Sparkle particles -->
-<div class="sparkles" id="sparkles"></div>
+  <!-- Sparkle particles -->
+  <div class="sparkles" id="sparkles"></div>
 
-<!-- Progress bar (counts down display time) -->
-<div class="progress-bar" style="--total: 15s;"></div>
+  <!-- Progress bar (counts down display time) -->
+  <div class="progress-bar" style="--total: 15s;"></div>
 
-<!-- Main card -->
-<div class="card">
-  <div class="channel-name">📺 Hỏi Đáp Đầu Tư AI</div>
+  <!-- Main card -->
+  <div class="card">
+    <div class="channel-name">📺 Hỏi Đáp Đầu Tư AI</div>
 
-  <div class="buttons">
-    <div class="btn-like">
-      <span class="thumb">👍</span>
-      Nhấn Like
+    <div class="buttons">
+      <div class="btn-like">
+        <span class="thumb">👍</span>
+        Nhấn Like
+      </div>
+      <div class="btn-subscribe">
+        <span class="bell">🔔</span>
+        Đăng Ký Kênh
+      </div>
     </div>
-    <div class="btn-subscribe">
-      <span class="bell">🔔</span>
-      Đăng Ký Kênh
-    </div>
+
+    <p class="tagline">
+      Nhấn <span>LIKE</span> và <span>ĐĂNG KÝ</span> để luôn nhận<br />
+      được tin tức thị trường mới nhất. Xin cảm ơn!
+    </p>
   </div>
 
-  <p class="tagline">
-    Nhấn <span>LIKE</span> và <span>ĐĂNG KÝ</span> để luôn nhận<br/>
-    được tin tức thị trường mới nhất. Xin cảm ơn! 🙏
-  </p>
-</div>
-
-<script>
-  // Generate random sparkle particles
-  const container = document.getElementById('sparkles');
-  for (let i = 0; i < 30; i++) {
-    const el = document.createElement('div');
-    el.className = 'sparkle';
-    el.style.left = Math.random() * 100 + 'vw';
-    el.style.top  = (50 + Math.random() * 50) + 'vh';
-    el.style.setProperty('--dur',   (2 + Math.random() * 3) + 's');
-    el.style.setProperty('--delay', (Math.random() * 3) + 's');
-    el.style.background = Math.random() > 0.5 ? '#ff4444' : '#ffffff';
-    container.appendChild(el);
-  }
-</script>
+  <script>
+    // Generate random sparkle particles
+    const container = document.getElementById('sparkles');
+    for (let i = 0; i < 30; i++) {
+      const el = document.createElement('div');
+      el.className = 'sparkle';
+      el.style.left = Math.random() * 100 + 'vw';
+      el.style.top = (50 + Math.random() * 50) + 'vh';
+      el.style.setProperty('--dur', (2 + Math.random() * 3) + 's');
+      el.style.setProperty('--delay', (Math.random() * 3) + 's');
+      el.style.background = Math.random() > 0.5 ? '#ff4444' : '#ffffff';
+      container.appendChild(el);
+    }
+  </script>
 
 </body>
+
 </html>
