@@ -55,7 +55,7 @@ HEADERS = {
 # ── Fetch helpers ─────────────────────────────────────────────────────────────
 
 def fetch_via_rss(url: str):
-    """Thử fetch RSS từ một mirror. Trả về list (link, title) hoặc None nếu lỗi."""
+    """Thử fetch RSS từ một mirror. Trả về list (link, description) hoặc None nếu lỗi."""
     try:
         resp = requests.get(url, headers=HEADERS, timeout=REQUEST_TIMEOUT)
         resp.raise_for_status()
@@ -65,9 +65,17 @@ def fetch_via_rss(url: str):
         entries = []
         for e in feed.entries[:5]:
             link = (getattr(e, "link", "") or getattr(e, "id", "")).strip()
-            title = getattr(e, "title", "").strip()
-            if link and title:
-                entries.append((link, title))
+            
+            # Lấy description thay vì title
+            raw_desc = getattr(e, "description", "").strip()
+            if not raw_desc:
+                raw_desc = getattr(e, "title", "").strip()
+            
+            # Chuyển HTML thành text thuần (tự động bỏ <p>, <span>...)
+            desc = BeautifulSoup(raw_desc, "html.parser").get_text(" ", strip=True)
+            
+            if link and desc:
+                entries.append((link, desc))
         return entries if entries else None
     except Exception as e:
         print(f"    [mirror] {url} → lỗi: {type(e).__name__}: {e}")
@@ -91,10 +99,10 @@ def fetch_via_telegram_web(telegram_url: str):
                 link = a["href"] if a else ""
 
             text_div = msg_div.select_one(".tgme_widget_message_text")
-            title = text_div.get_text(" ", strip=True)[:200] if text_div else ""
+            desc = text_div.get_text(" ", strip=True) if text_div else ""
 
-            if link and title:
-                entries.append((link, title))
+            if link and desc:
+                entries.append((link, desc))
         return entries if entries else None
     except Exception as e:
         print(f"    [t.me scrape] {telegram_url} → lỗi: {type(e).__name__}: {e}")
@@ -183,7 +191,7 @@ async def process_news():
 
     last_links = load_last_links()
     updated_links = dict(last_links)
-    new_titles = []
+    new_descriptions = []
 
     for channel in CHANNELS:
         name = channel["name"]
@@ -194,7 +202,7 @@ async def process_news():
             print(f"  [Skip] Không lấy được dữ liệu cho @{name}")
             continue
 
-        latest_link, latest_title = entries[0]
+        latest_link, latest_desc = entries[0]
         last_link = last_links.get(name, "")
 
         print(f"  latest_link = {latest_link!r}")
@@ -205,33 +213,33 @@ async def process_news():
             continue
 
         # Lấy tối đa 2 tin mới nhất
-        for link, title in entries[:2]:
-            new_titles.append(title)
+        for link, desc in entries[:2]:
+            new_descriptions.append(desc)
 
         updated_links[name] = latest_link
 
-    if not new_titles:
+    if not new_descriptions:
         print("\n[Skip] Không có tin mới từ tất cả các nguồn.")
         return
 
-    # Làm sạch tiêu đề: xóa emoji, bỏ qua title rỗng sau khi clean
-    clean_titles = [ct for t in new_titles if (ct := clean_title(t))]
+    # Làm sạch nội dung: xóa emoji, bỏ qua nội dung rỗng sau khi clean
+    clean_descriptions = [cd for d in new_descriptions if (cd := clean_title(d))]
 
     # --- Cập nhật hiển thị (tự xóa sau 2 phút) ---
     wrapper = textwrap.TextWrapper(width=55, subsequent_indent='  ')
     display_content = f"BREAKING NEWS: {datetime.now().strftime('%H:%M %d/%m')}\n"
     display_content += "-" * 40 + "\n"
-    for title in clean_titles:
-        wrapped = wrapper.fill(for_display(title))
+    for desc in clean_descriptions:
+        wrapped = wrapper.fill(for_display(desc))
         display_content += f"- {wrapped}\n\n"
     update_display_file(display_content)
     schedule_clear_display(60)
-    print(f"\n[File] Cập nhật {DISPLAY_FILE} với {len(clean_titles)} tin (tự xóa sau 2 phút)")
+    print(f"\n[File] Cập nhật {DISPLAY_FILE} với {len(clean_descriptions)} tin (tự xóa sau 2 phút)")
 
     # --- TTS ---
     audio_text = "Tin Nóng."
-    for i, title in enumerate(clean_titles, 1):
-        audio_text += f"Tin {i}: {title}. "
+    for i, desc in enumerate(clean_descriptions, 1):
+        audio_text += f"Tin {i}: {desc}. "
     await tts_worker.text_to_speech_smart(audio_text)
 
     save_last_links(updated_links)
