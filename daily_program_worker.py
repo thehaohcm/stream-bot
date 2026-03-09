@@ -156,10 +156,28 @@ async def generate_and_broadcast(title, dialogue):
     # File tiêu đề tổng
     header = f"=== {title.upper()} ===\n"
     
+    import re
     for idx, line in enumerate(dialogue):
         speaker = line.get("speaker", "Bull")
         text = line.get("text", "")
         print(f"[{speaker}] {text}")
+        
+        # Phát hiện mã chứng khoán (3 chữ cái in hoa)
+        matches = re.findall(r'\b([A-Z]{3})\b', text)
+        tts_text = text
+        found_stock = None
+        for m in matches:
+            if m not in ["USD", "BTC", "SJC", "VNI"]:
+                if not found_stock:
+                    found_stock = m
+                # Đọc chậm từng chữ cái của mã cổ phiếu
+                spaced = " ".join(list(m))
+                tts_text = re.sub(rf'\b{m}\b', spaced, tts_text)
+                
+        if found_stock:
+            with open("stock_signal.txt", "w", encoding="utf-8") as f:
+                f.write(found_stock)
+            print(f"[Daily Worker] Phát hiện mã cổ phiếu {found_stock}, hiển thị chart lên màn hình.")
         
         # update display
         with open(DISPLAY_FILE, "w", encoding="utf-8") as f:
@@ -172,8 +190,8 @@ async def generate_and_broadcast(title, dialogue):
         # Chờ audio_mixer rảnh
         await wait_for_mixer()
         
-        # Lưu ra file stream
-        await tts_worker.text_to_speech_smart(text)
+        # Lưu ra file stream (đã tách code để đọc chậm)
+        await tts_worker.text_to_speech_smart(tts_text)
         
         # Đồng thời lưu bản copy cho VOD
         vod_audio = f"{temp_dir}/part_{idx}.mp3"
