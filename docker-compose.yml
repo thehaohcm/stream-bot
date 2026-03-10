@@ -3,7 +3,7 @@ version: '3.8'
 services:
   stream-bot:
     build: .
-    container_name: stream-bot
+    container_name: yt-trading-stream-bot
     restart: unless-stopped
     env_file:
       - .env
