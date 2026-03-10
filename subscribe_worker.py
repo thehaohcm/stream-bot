@@ -20,7 +20,7 @@ REMIND_SUBSCRIBE_TEXT = (
 
 REMIND_CTA_TEXT = (
     "Hệ thống vừa phát hiện nhiều cơ hội đầu tư hấp dẫn. "
-    "Hãy quét ngay mã quy mờ trên màn hình để tham gia nhóm Da Lô nhận tín hiệu giao dịch sớm nhất. "
+    "Hãy quét ngay mã quy rờ trên màn hình để tham gia nhóm Da Lô nhận tín hiệu giao dịch sớm nhất. "
     "Quét mã ngay kẻo lỡ cơ hội."
 )
 
