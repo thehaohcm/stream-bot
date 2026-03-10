@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  stream-bot:
+    build: .
+    container_name: stream-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    # Optional: if you want to mount volume for persistent media/files, add under here:
+    # volumes:
+    #   - ./media:/app/media
