@@ -25,7 +25,11 @@ VIETSTOCK_STOCK_URL = "https://stockchart.vietstock.vn/?stockcode={}"
 TARGET_URLS = [
     VIETSTOCK_BASE_URL,
     "https://mihong.vn/gia-vang-trong-nuoc",
-    "https://www.binance.com/en/trade/BTC_USDT?type=spot"
+    "https://www.binance.com/en/trade/BTC_USDT?type=spot",
+    "https://thehaohcm.alwaysdata.net/assets_rrgchart.png",
+    "https://thehaohcm.alwaysdata.net/crypto_rrgchart.png",
+    "https://thehaohcm.alwaysdata.net/vnstock_rrgchart.png",
+    "https://thehaohcm.alwaysdata.net/forex_rrgchart.png",
 ]
 
 # File giao tiếp với youtube_ai_worker

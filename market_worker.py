@@ -106,22 +106,27 @@ def fetch_vnindex() -> float | None:
     return None
 
 
-def fetch_gold_vnd() -> float | None:
-    """Lấy giá vàng SJC nội địa qua sjc.com.vn XML (html.parser, không cần lxml)."""
+def fetch_gold_vnd() -> tuple[float, float] | None:
+    """Lấy giá vàng SJC từ API của DOJI."""
     try:
-        url = "https://sjc.com.vn/xml/tygiavang.xml"
+        url = "https://giavang.doji.vn/?q=doji/get/json/gia_vang_quoc_te"
         resp = requests.get(url, headers=HEADERS, timeout=10)
         resp.raise_for_status()
-        # Dùng html.parser — tương thích mà không cần cài lxml
-        soup = BeautifulSoup(resp.content, "html.parser")
-        for tag in soup.find_all("row"):
-            type_val = tag.get("type", "")
-            if "1L" in type_val or "1 L" in type_val:
-                sell_str = tag.get("sell", "").replace(",", "").strip()
-                if sell_str:
-                    return float(sell_str)
+        data = resp.json()
+        
+        main_price_html = data.get("main_price", "")
+        soup = BeautifulSoup(main_price_html, "html.parser")
+        
+        for tr in soup.find_all("tr"):
+            title_span = tr.find("span", class_="title")
+            if title_span and "SJC" in title_span.get_text(strip=True).upper():
+                divs = tr.find_all("div", class_="item-relative")
+                if len(divs) >= 2:
+                    buy_str = divs[0].get_text(strip=True).replace(",", "")
+                    sell_str = divs[1].get_text(strip=True).replace(",", "")
+                    return float(buy_str), float(sell_str)
     except Exception as e:
-        print(f"[Market] Scrape giá vàng SJC lỗi: {e}")
+        print(f"[Market] Scrape giá vàng DOJI lỗi: {e}")
     return None
 
 
@@ -154,10 +159,19 @@ def build_announcement(prices: dict) -> tuple[str, str]:
             lines_display.append(f"{label_display}: --")
 
     add("Vàng thế giới", "XAU/USD", prices.get("gold_usd"), "đô la mỗi ounce", 2)
-    add("Vàng SJC trong nước", "SJC", prices.get("gold_vnd"), "nghìn đồng mỗi lượng", 0)
+    
+    gold_vnd = prices.get("gold_vnd")
+    if isinstance(gold_vnd, tuple):
+        mua_str = fmt_number(gold_vnd[0], 0)
+        ban_str = fmt_number(gold_vnd[1], 0)
+        lines_tts.append(f"Vàng SJC trong nước: Mua vào {mua_str}, Bán ra {ban_str} nghìn đồng một chỉ.")
+        lines_display.append(f"SJC: Mua {mua_str} - Bán {ban_str} nghìn/chỉ")
+    else:
+        add("Vàng SJC trong nước", "SJC", gold_vnd, "nghìn đồng mỗi lượng", 0)
+        
     add("Bitcoin", "BTC/USD", prices.get("btc"), "đô la", 0)
-    add("V N Index", "VNIndex", prices.get("vnindex"), "điểm", 2)
-    add("S và P 500", "S&P500", prices.get("sp500"), "điểm", 2)
+    add("Vi en Index", "VNIndex", prices.get("vnindex"), "điểm", 2)
+    add("S and P 500", "S&P500", prices.get("sp500"), "điểm", 2)
     add("Nasdaq 100", "Nasdaq", prices.get("nasdaq"), "điểm", 2)
 
     tts_text = " ".join(lines_tts)
