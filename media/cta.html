@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Premium CTA</title>
+    <!-- Use specific version of Tailwind as requested per web dev guidelines. Tailwind 3.4 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Outfit', sans-serif;
+            background-color: transparent;
+        }
+
+        .cta-container {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%);
+            border: 2px solid rgba(255, 215, 0, 0.3);
+            box-shadow: 0 0 50px rgba(255, 215, 0, 0.1), inset 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .golden-text {
+            background: linear-gradient(to right, #FDE047, #F59E0B, #D97706);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .shimmer {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .shimmer::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 50%;
+            height: 100%;
+            background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transform: skewX(-20deg);
+            animation: shimmer 3s infinite;
+        }
+
+        @keyframes shimmer {
+            100% {
+                left: 200%;
+            }
+        }
+    </style>
+</head>
+
+<body class="w-[1280px] h-[720px] flex items-center justify-center bg-transparent">
+
+    <div
+        class="cta-container w-full max-w-4xl rounded-3xl p-10 flex gap-8 transform translate-y-10 relative overflow-hidden">
+
+        <!-- Hiệu ứng viền vàng phát sáng -->
+        <div
+            class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-yellow-400 to-transparent opacity-70">
+        </div>
+
+        <!-- Cột Logo / Nội dung -->
+        <div class="flex-1 flex flex-col justify-center">
+            <div
+                class="inline-flex items-center space-x-3 bg-yellow-900/40 rounded-full px-4 py-2 border border-yellow-500/30 mb-6 w-max shimmer">
+                <svg class="w-6 h-6 text-yellow-400" fill="currentColor" viewBox="0 0 24 24">
+                    <path
+                        d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                </svg>
+                <span class="text-yellow-200 font-bold tracking-wide uppercase text-sm">Cơ Hội Đầu Tư Đặc Quyền</span>
+            </div>
+
+            <h1 class="text-5xl font-black text-white leading-tight mb-4">
+                Tham gia ngay <br />
+                <span class="golden-text text-6xl drop-shadow-lg">ROOM VIP ZALO</span>
+            </h1>
+
+            <ul class="space-y-4 mb-8 text-gray-300 text-lg">
+                <li class="flex items-center">
+                    <svg class="w-5 h-5 text-green-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    Nhận phím hàng cổ phiếu tiềm năng T+3
+                </li>
+                <li class="flex items-center">
+                    <svg class="w-5 h-5 text-green-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    Cảnh báo điểm chốt lời & cắt lỗ kịp thời
+                </li>
+                <li class="flex items-center">
+                    <svg class="w-5 h-5 text-green-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    Phân tích từ chuyên gia AI chính xác 90%
+                </li>
+            </ul>
+        </div>
+
+        <!-- Cột QR Code -->
+        <div class="w-72 flex flex-col items-center justify-center relative">
+            <!-- Glow background -->
+            <div class="absolute inset-0 bg-yellow-500 rounded-full blur-[80px] opacity-20"></div>
+
+            <div
+                class="bg-white p-4 rounded-2xl shadow-2xl z-10 border-4 border border-yellow-400 transform transition-transform hover:scale-105 duration-300">
+                <!-- Chỗ trống đặt ảnh QR. Mặc định dùng API tạo QR giả minh hoạ -->
+                <!-- Có thể thay SRC này bằng link ảnh QR thật của khách hàng -->
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://zalo.me/g/example"
+                    alt="QR Code VIP" class="w-48 h-48 rounded-lg">
+            </div>
+
+            <div
+                class="mt-6 bg-gradient-to-r from-yellow-500 to-amber-600 text-black font-black uppercase tracking-wider py-3 px-6 rounded-full shadow-lg shimmer z-10 w-full text-center text-lg">
+                QUÉT MÃ NGAY
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
